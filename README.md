@@ -4,6 +4,71 @@ Herramienta web local para validar archivos Excel de atenciones de salud CPMS.
 Detecta códigos duplicados, redundancias de grupo y códigos no permitidos por tipo de atención,
 y genera un archivo Excel marcado con acciones sugeridas y motivos de observación.
 
+## Distribución sin instalación (para usuario final)
+
+Si necesitas entregar la app a alguien que **no tiene Laragon, XAMPP ni ningún servidor**,
+puedes empaquetarla con PHP portable. El usuario final solo hace doble clic en `iniciar.bat`.
+
+### Qué necesita el paquete
+
+```
+ValidadorCPMS/
+├── php/          ← PHP portable (tú lo agregas al empaquetar, no está en el repo)
+├── assets/
+├── src/
+├── storage/
+├── vendor/       ← pre-instalado antes de empaquetar
+├── index.php
+├── descargar.php
+├── composer.json
+└── iniciar.bat
+```
+
+### Pasos para empaquetar (en tu PC de desarrollo)
+
+1. **Descargar PHP portable** desde <https://windows.php.net/download/>
+   → selecciona la versión **NTS x64** más reciente → descarga el `.zip`
+
+2. **Descomprimir** el zip de PHP dentro del proyecto como carpeta `php\`:
+   ```
+   ValidadorCPMS\php\php.exe   ← debe quedar aquí
+   ```
+
+3. **Crear `php\php.ini`** copiando la plantilla del repo:
+   ```bat
+   copy php.ini.dist php\php.ini
+   ```
+
+4. **Preinstalar dependencias** (sin paquetes de desarrollo):
+   ```bat
+   composer install --no-dev --optimize-autoloader
+   ```
+
+5. **Comprimir** toda la carpeta `ValidadorCPMS\` (incluyendo `php\` y `vendor\`)
+   y enviarla al usuario final.
+
+### Instrucciones para el usuario final
+
+1. Descomprimir la carpeta recibida en cualquier lugar del equipo.
+2. Hacer doble clic en **`iniciar.bat`**.
+3. El navegador se abre automáticamente en `http://localhost:8080`.
+4. Para detener el servidor: cerrar la ventana negra de consola.
+
+### Actualizaciones
+
+Cuando hagas cambios en el código, solo necesitas enviar los archivos que cambiaron:
+
+| Tipo de cambio | Archivos a reemplazar |
+|----------------|----------------------|
+| Reglas, lógica | `src/` completo |
+| Interfaz web | `assets/`, `index.php`, `descargar.php` |
+| Nueva dependencia Composer | `vendor/` completo |
+| Cambio de PHP | `php/` completo |
+
+El usuario reemplaza esos archivos en su carpeta y no necesita hacer nada más.
+
+---
+
 ## Requisitos
 
 | Requisito | Versión mínima |

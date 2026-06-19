@@ -1,0 +1,21 @@
+; php.ini para PHP portable — ValidadorCPMS
+; Copiar este archivo como php\php.ini al empaquetar para distribución.
+
+[PHP]
+extension_dir = "ext"
+
+; Extensiones requeridas por phpspreadsheet
+extension=zip
+extension=fileinfo
+extension=mbstring
+extension=gd
+
+; Límites para archivos Excel grandes
+memory_limit = 1G
+max_execution_time = 180
+upload_max_filesize = 64M
+post_max_size = 68M
+max_input_time = 180
+
+; Zona horaria (ajustar según país)
+date.timezone = America/Lima
