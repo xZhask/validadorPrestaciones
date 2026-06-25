@@ -6,12 +6,28 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use Validador\EscritorExcel;
 use Validador\LectorExcel;
+use Validador\Logger;
 use Validador\MotorValidacion;
 use Validador\Reglas\ReglaCodigosDuplicados;
 use Validador\Reglas\ReglaRedundanciaGrupo;
 use Validador\Reglas\ReglaCodigoNoPermitidoPorTipo;
 
 $cfg = require __DIR__ . '/src/config.php';
+
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/logs/php_errors.log');
+
+set_error_handler(function (int $errno, string $errstr, string $errfile, int $errline): bool {
+    Logger::error("PHP error [{$errno}]: {$errstr} en {$errfile}:{$errline}");
+    return false;
+});
+
+register_shutdown_function(function (): void {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        Logger::error('Fatal PHP error: ' . $error['message'] . ' en ' . $error['file'] . ':' . $error['line']);
+    }
+});
 
 // ── Motor de validación ────────────────────────────────────────────────────
 function construirMotor(array $cfg): MotorValidacion
@@ -156,8 +172,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
                 }
             }
 
+            Logger::info(sprintf(
+                'Validación completada: %s — %d atenciones, %d con observaciones',
+                $file['name'],
+                $totalAtenciones,
+                $totalFilasObs,
+            ));
+
         } catch (\Throwable $e) {
             $error = $e->getMessage();
+            Logger::error('Error procesando archivo: ' . ($_FILES['archivo']['name'] ?? 'desconocido'), $e);
         }
     }
 }
