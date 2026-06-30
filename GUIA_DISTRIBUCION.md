@@ -130,7 +130,10 @@ Una vez confirmado que funciona, crea el paquete para el usuario.
 ValidadorCPMS\                ← nombre sugerido para la carpeta raíz del ZIP
 ├── iniciar.bat
 ├── index.php
+├── api.php
+├── revisar.php
 ├── descargar.php
+├── auditorias.php
 ├── php\                      ← PHP portátil completo
 ├── src\                      ← clases del validador
 ├── assets\                   ← estilos y scripts web
@@ -150,6 +153,8 @@ composer.lock
 php.ini.dist        ← ya fue copiado como php\php.ini
 README.md
 GUIA_DISTRIBUCION.md
+claude-code-*.md    ← archivos internos de desarrollo
+*.html              ← mockups internos
 ```
 
 #### Cómo crear el ZIP
@@ -248,7 +253,10 @@ extension=gd
 ValidadorCPMS\
 ├── iniciar.bat          ← DOBLE CLIC AQUÍ PARA INICIAR
 ├── index.php
+├── api.php
+├── revisar.php
 ├── descargar.php
+├── auditorias.php
 ├── php\
 │   ├── php.exe
 │   ├── php.ini

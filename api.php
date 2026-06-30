@@ -219,11 +219,13 @@ function rutaGetPrestacion(GestorSesiones $gestor): never
     }
 
     jsonOk([
-        'pk'          => $pkStr,
-        'validada'    => (bool) $p['validada'],
-        'ipress_cod'  => $datosPk['ipress_cod'],
-        'ipress_nom'  => $datosPk['ipress_nom'],
-        'tipo'        => $datosPk['tipo'],
+        'pk'           => $pkStr,
+        'validada'     => (bool) $p['validada'],
+        'ipress_cod'   => $datosPk['ipress_cod'],
+        'ipress_nom'   => $datosPk['ipress_nom'],
+        'tipo'         => $datosPk['tipo'],
+        'fecha_inicio' => $datosPk['fecha_inicio'] ?? '',
+        'fecha_fin'    => $datosPk['fecha_fin']    ?? '',
         'diagnosticos' => [
             ['slot' => 1, 'codigo' => $datosPk['diag1_codigo'], 'desc' => $datosPk['diag1_desc']],
             ['slot' => 2, 'codigo' => $datosPk['diag2_codigo'], 'desc' => $datosPk['diag2_desc']],

@@ -22,7 +22,10 @@ class Normalizador
         if ($raw === null || $raw === '') {
             return '';
         }
-        $s = number_format((float) $raw, 6, '.', '');
-        return rtrim(rtrim($s, '0'), '.');
+        if (is_numeric($raw)) {
+            $s = number_format((float) $raw, 6, '.', '');
+            return rtrim(rtrim($s, '0'), '.');
+        }
+        return trim((string) $raw);
     }
 }

@@ -53,6 +53,8 @@ class GestorSesiones
                 'ipress_cod'   => $primera['ipress_cod']   ?? '',
                 'ipress_nom'   => $primera['ipress_nom']   ?? '',
                 'tipo'         => $primera['tipo']         ?? '',
+                'fecha_inicio' => $primera['fecha_inicio'] ?? '',
+                'fecha_fin'    => $primera['fecha_fin']    ?? '',
                 'diag1_codigo' => $primera['diag1_codigo'] ?? '',
                 'diag1_desc'   => $primera['diag1_desc']   ?? '',
                 'diag2_codigo' => $primera['diag2_codigo'] ?? '',

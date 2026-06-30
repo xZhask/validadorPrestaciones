@@ -71,9 +71,11 @@ class LectorExcel
         $iDesc       = $this->buscarCol($colMap, $cc['desc']);
         $iValor      = $this->buscarCol($colMap, $cc['valor']);
         $iCantidad   = $this->buscarColOpcional($colMap, $cc['cantidad']   ?? null);
-        $iIpressCod  = $this->buscarColOpcional($colMap, $cc['ipress_codigo'] ?? null);
-        $iIpressNom  = $this->buscarColOpcional($colMap, $cc['ipress_nombre'] ?? null);
-        $iDiag1Cod   = $this->buscarColOpcional($colMap, $cc['diag1_codigo']  ?? null);
+        $iIpressCod    = $this->buscarColOpcional($colMap, $cc['ipress_codigo'] ?? null);
+        $iIpressNom    = $this->buscarColOpcional($colMap, $cc['ipress_nombre'] ?? null);
+        $iFechaInicio  = $this->buscarColOpcional($colMap, $cc['fecha_inicio']  ?? null);
+        $iFechaFin     = $this->buscarColOpcional($colMap, $cc['fecha_fin']     ?? null);
+        $iDiag1Cod     = $this->buscarColOpcional($colMap, $cc['diag1_codigo']  ?? null);
         $iDiag1Desc  = $this->buscarColOpcional($colMap, $cc['diag1_desc']    ?? null);
         $iDiag2Cod   = $this->buscarColOpcional($colMap, $cc['diag2_codigo']  ?? null);
         $iDiag2Desc  = $this->buscarColOpcional($colMap, $cc['diag2_desc']    ?? null);
@@ -114,6 +116,8 @@ class LectorExcel
                                     : null,
                 'ipress_cod'   => $codIpress,
                 'ipress_nom'   => $nomIpress,
+                'fecha_inicio' => $iFechaInicio !== null ? $this->normalizarFecha($raw[$i][$iFechaInicio - 1] ?? null) : '',
+                'fecha_fin'    => $iFechaFin    !== null ? $this->normalizarFecha($raw[$i][$iFechaFin    - 1] ?? null) : '',
                 'diag1_codigo' => $iDiag1Cod  !== null ? trim((string) ($raw[$i][$iDiag1Cod  - 1] ?? '')) : '',
                 'diag1_desc'   => $iDiag1Desc !== null ? trim((string) ($raw[$i][$iDiag1Desc - 1] ?? '')) : '',
                 'diag2_codigo' => $iDiag2Cod  !== null ? trim((string) ($raw[$i][$iDiag2Cod  - 1] ?? '')) : '',
@@ -211,5 +215,32 @@ class LectorExcel
     public static function indiceCol(array $datos, string $nombreCfg): ?int
     {
         return $datos['colMap'][Texto::clave($nombreCfg)] ?? null;
+    }
+
+    /**
+     * Normaliza una celda de fecha a formato d/m/Y.
+     * Acepta números seriales de Excel o cadenas en formatos comunes.
+     */
+    private function normalizarFecha(mixed $raw): string
+    {
+        if ($raw === null || $raw === '') {
+            return '';
+        }
+        if (is_numeric($raw)) {
+            try {
+                $dt = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $raw);
+                return $dt->format('d/m/Y');
+            } catch (\Throwable) {
+                return '';
+            }
+        }
+        $s = trim((string) $raw);
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'Y/m/d'] as $fmt) {
+            $dt = \DateTimeImmutable::createFromFormat($fmt, $s);
+            if ($dt !== false) {
+                return $dt->format('d/m/Y');
+            }
+        }
+        return $s;
     }
 }

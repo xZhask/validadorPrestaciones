@@ -107,6 +107,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .gen .pk{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--ink)}
 .gen .ctx{font-size:13px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .pill{font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--ink)}
+.pill-fecha{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .dx{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
 .dx .pill b{font-family:var(--mono);font-weight:500;margin-right:4px}
 
@@ -281,6 +282,10 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
                 <option value="CONSERVAR">CONSERVAR</option>
             </select>
         </div>
+        <div id="dlgCantidadWrap" style="display:none">
+            <label class="field-lbl" for="dlgCantidad">Cantidad</label>
+            <input type="number" class="field-sel" id="dlgCantidad" min="1" value="1">
+        </div>
         <div>
             <label class="field-lbl" for="dlgMotivo">Motivo</label>
             <textarea class="field-ta" id="dlgMotivo" placeholder="Describe el motivo…"></textarea>
@@ -368,6 +373,27 @@ function h(str) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function abreviarIpress(nombre) {
+    const n = (nombre || '').toUpperCase();
+    if (n.includes('AREQUIPA'))  return 'Arequipa';
+    if (n.includes('CHICLAYO'))  return 'Chiclayo';
+    if (n.includes('LEGU'))      return 'A. B. LEGUÍA';
+    if (n.includes('SAN JOS'))   return 'HG SAN JOSÉ';
+    return nombre.length > 20 ? nombre.slice(0, 18) + '…' : nombre;
+}
+
+function formatRangoFechas(inicio, fin) {
+    if (!inicio && !fin) return '';
+    if (!inicio) return fin;
+    if (!fin)    return inicio;
+    const pi = inicio.split('/');
+    const pf = fin.split('/');
+    if (pi.length === 3 && pf.length === 3 && pi[2] === pf[2]) {
+        return `${pi[0]}/${pi[1]} → ${fin}`;
+    }
+    return `${inicio} → ${fin}`;
+}
+
 function familiaDeRegla(regla) {
     if (!regla) return 'manual';
     if (regla.startsWith('PROHIBIDO')) return 'tipo';
@@ -443,7 +469,7 @@ function renderSidebar() {
         const dotSvg = p.validada
             ? `<svg viewBox="0 0 24 24" stroke="var(--accent)"><path d="M20 6 9 17l-5-5"/></svg>`
             : `<svg viewBox="0 0 24 24" stroke="var(--faint)"><circle cx="12" cy="12" r="9"/></svg>`;
-        const ipLabel = ipNom.length > 24 ? ipNom.slice(0, 22) + '…' : ipNom;
+        const ipLabel = abreviarIpress(ipNom);
         el.innerHTML = `
             <span class="dot">${dotSvg}</span>
             <div style="min-width:0;flex:1">
@@ -538,13 +564,14 @@ function renderDetalle() {
 
     const chkSvg = `<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>`;
 
+    const fechaRango = formatRangoFechas(d.fecha_inicio || '', d.fecha_fin || '');
     const html = `
         <div class="gen">
             <div>
                 <div class="pk">${h(d.pk)}</div>
                 <div class="ctx">
                     <span class="pill">${h(d.ipress_nom)}</span>
-                    <span class="pill">Tipo ${h(d.tipo)}</span>
+                    ${fechaRango ? `<span class="pill pill-fecha">${h(fechaRango)}</span>` : ''}
                 </div>
                 ${dxHtml ? `<div class="dx">${dxHtml}</div>` : ''}
             </div>
@@ -580,12 +607,29 @@ function renderDetalle() {
     document.getElementById('detContent').innerHTML = html;
 }
 
+function sortDuplicados(items) {
+    const firstFila = {};
+    items.forEach(item => {
+        if (!(item.codigo in firstFila) || item.fila < firstFila[item.codigo])
+            firstFila[item.codigo] = item.fila;
+    });
+    return [...items].sort((a, b) => {
+        const df = firstFila[a.codigo] - firstFila[b.codigo];
+        if (df !== 0) return df;
+        const aElim = /^ELIMINAR/i.test(a.accion) ? 1 : 0;
+        const bElim = /^ELIMINAR/i.test(b.accion) ? 1 : 0;
+        if (aElim !== bElim) return aElim - bElim;
+        return a.fila - b.fila;
+    });
+}
+
 function renderGrupo(fam, items) {
     const meta   = FAM_META[fam];
     const col    = !!colapsados[fam];
     const revisN = items.filter(i => i.revisada).length;
     const cntTx  = revisN > 0 ? `(${items.length} · ${revisN} rev.)` : `(${items.length})`;
-    const rows   = col ? '' : items.map(renderObsRow).join('');
+    const ordered = fam === 'dup' ? sortDuplicados(items) : items;
+    const rows   = col ? '' : ordered.map(renderObsRow).join('');
 
     return `<div class="grp">
         <div class="grp-head ${col ? 'collapsed' : ''}" onclick="toggleGrupo('${fam}')">
@@ -676,6 +720,8 @@ function abrirAgregar(fila) {
     dlgMode = 'add'; dlgFila = fila; dlgIdx = null;
     document.getElementById('dlgTitulo').textContent = `Nueva observación — Fila ${fila}`;
     document.getElementById('dlgAccion').value = 'ELIMINAR';
+    document.getElementById('dlgCantidad').value = '1';
+    document.getElementById('dlgCantidadWrap').style.display = 'none';
     document.getElementById('dlgMotivo').value = '';
     document.getElementById('dlgObs').showModal();
 }
@@ -685,13 +731,31 @@ function abrirEditar(fila, idx) {
     if (!obs) { toast('Observación no encontrada', 'err'); return; }
     dlgMode = 'edit'; dlgFila = fila; dlgIdx = idx;
     document.getElementById('dlgTitulo').textContent = `Editar observación — Fila ${fila}`;
-    document.getElementById('dlgAccion').value = obs.accion || 'ELIMINAR';
+    const mQty = (obs.accion || '').match(/^AGREGAR\s*[—\-]\s*cantidad\s*=\s*(\d+)/i);
+    if (mQty) {
+        document.getElementById('dlgAccion').value = 'AGREGAR';
+        document.getElementById('dlgCantidad').value = mQty[1];
+        document.getElementById('dlgCantidadWrap').style.display = '';
+    } else {
+        document.getElementById('dlgAccion').value = obs.accion || 'ELIMINAR';
+        document.getElementById('dlgCantidad').value = '1';
+        document.getElementById('dlgCantidadWrap').style.display = 'none';
+    }
     document.getElementById('dlgMotivo').value = obs.motivo || '';
     document.getElementById('dlgObs').showModal();
 }
 
+document.getElementById('dlgAccion').addEventListener('change', () => {
+    document.getElementById('dlgCantidadWrap').style.display =
+        document.getElementById('dlgAccion').value === 'AGREGAR' ? '' : 'none';
+});
+
 document.getElementById('dlgGuardar').addEventListener('click', async () => {
-    const accion = document.getElementById('dlgAccion').value.trim();
+    let accion = document.getElementById('dlgAccion').value.trim();
+    if (accion === 'AGREGAR') {
+        const n = parseInt(document.getElementById('dlgCantidad').value, 10) || 1;
+        accion = `AGREGAR — cantidad = ${n}`;
+    }
     const motivo = document.getElementById('dlgMotivo').value.trim();
     if (!motivo) { toast('El motivo es obligatorio', 'err'); return; }
     const btn = document.getElementById('dlgGuardar');

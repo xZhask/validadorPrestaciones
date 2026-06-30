@@ -19,6 +19,8 @@ return [
         'cantidad'      => 'cantidad',
         'ipress_codigo' => 'CÓDIGO IPRESS',
         'ipress_nombre' => 'NOMBRE IPRESS',
+        'fecha_inicio'  => 'FECHA DE ATENCIÓN',
+        'fecha_fin'     => 'FECHA DE ALTA',
         'diag1_codigo'  => 'CODIGO DEL DIAGNOSTICO1',
         'diag1_desc'    => 'DESCRIPCION DEL DIAGNOSTICO1',
         'diag2_codigo'  => 'CODIGO DEL DIAGNOSTICO2',
