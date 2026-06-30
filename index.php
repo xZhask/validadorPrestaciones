@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Validador\EscritorExcel;
+use Validador\GestorSesiones;
 use Validador\LectorExcel;
 use Validador\Logger;
-use Validador\MotorValidacion;
-use Validador\Reglas\ReglaCodigosDuplicados;
-use Validador\Reglas\ReglaRedundanciaGrupo;
-use Validador\Reglas\ReglaCodigoNoPermitidoPorTipo;
 
 $cfg = require __DIR__ . '/src/config.php';
+require_once __DIR__ . '/src/construirMotor.php';
 
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/logs/php_errors.log');
@@ -28,42 +25,6 @@ register_shutdown_function(function (): void {
         Logger::error('Fatal PHP error: ' . $error['message'] . ' en ' . $error['file'] . ':' . $error['line']);
     }
 });
-
-// ── Motor de validación ────────────────────────────────────────────────────
-function construirMotor(array $cfg): MotorValidacion
-{
-    $m = new MotorValidacion();
-
-    $m->registrar(new ReglaCodigoNoPermitidoPorTipo(
-        codigoRegla:     'PROHIBIDO_93784',
-        nombreRegla:     'Código 93784 no permitido (tipo 2 y 3)',
-        colorHex:        $cfg['colores']['ELIMINAR_PROHIBIDO']['hex'],
-        prioridadVal:    4,
-        codigoCpms:      '93784',
-        tiposProhibidos: ['2', '3'],
-        accionTexto:     'ELIMINAR',
-    ));
-
-    $m->registrar(new ReglaCodigosDuplicados());
-
-    $m->registrar(new ReglaRedundanciaGrupo(
-        codigoRegla:  'HEMOGRAMA',
-        nombreRegla:  'Redundancia Hemograma',
-        colorHex:     $cfg['grupos']['hemograma']['color'],
-        prioridadVal: 2,
-        codigos:      $cfg['grupos']['hemograma']['codigos'],
-    ));
-
-    $m->registrar(new ReglaRedundanciaGrupo(
-        codigoRegla:  'UROCULTIVO',
-        nombreRegla:  'Redundancia Urocultivo',
-        colorHex:     $cfg['grupos']['urocultivo']['color'],
-        prioridadVal: 1,
-        codigos:      $cfg['grupos']['urocultivo']['codigos'],
-    ));
-
-    return $m;
-}
 
 // ── Limpieza periódica de storage/ (se ejecuta en cada carga de página) ───
 function limpiarStoragePasivo(string $dir, int $ttl): void
@@ -95,18 +56,18 @@ const UPLOAD_ERRORES = [
 ];
 
 // ── Estado de la solicitud ─────────────────────────────────────────────────
-$error           = null;
-$aviso           = null;   // mensaje informativo (no error)
-$token           = null;
-$nombreSalida    = null;
-$resultado       = null;
+$error            = null;
+$aviso            = null;
+$nombreSalida     = null;
+$resultado        = null;
 $sinObservaciones = false;
-$totalAtenciones = 0;
-$resumenReglas   = [];
-$tablaFilas      = [];
-$totalFilasObs   = 0;
-$maxTabla        = $cfg['limites']['max_filas_tabla'];
-$truncado        = false;
+$totalAtenciones  = 0;
+$resumenReglas    = [];
+$tablaFilas       = [];
+$totalFilasObs    = 0;
+$maxTabla         = $cfg['limites']['max_filas_tabla'];
+$truncado         = false;
+$sesionId         = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
 
@@ -124,6 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
 
     } else {
         try {
+            // Crear sesión de auditoría antes de procesar
+            $gestor   = new GestorSesiones($cfg['storage_dir']);
+            $sesionId = $gestor->crear($file['tmp_name'], $file['name']);
+
             $lector    = new LectorExcel();
             $datos     = $lector->cargar($file['tmp_name']);
             $motor     = construirMotor($cfg);
@@ -132,13 +97,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
             $totalAtenciones  = count($datos['atenciones']);
             $sinObservaciones = $resultado->vacio();
 
-            unset($datos['rows'], $datos['atenciones']);
+            // Persistir observaciones del sistema en la sesión
+            $estado   = $gestor->cargar($sesionId);
+            $porFila  = $resultado->porFila();
+            foreach ($porFila as $fila => $listaObs) {
+                foreach ($listaObs as $obs) {
+                    $estado['prestaciones'][$obs->pk]['observaciones'][(string) $fila][] = [
+                        'regla'     => $obs->reglaCodigo,
+                        'accion'    => $obs->accion,
+                        'motivo'    => $obs->motivo,
+                        'color'     => $obs->color,
+                        'prioridad' => $obs->prioridad,
+                        'origen'    => 'sistema',
+                    ];
+                }
+            }
+            $gestor->guardar($sesionId, $estado);
+            unset($estado, $porFila, $datos);
             gc_collect_cycles();
 
-            $escritor     = new EscritorExcel();
-            $salida       = $escritor->escribir($datos, $resultado, $file['name']);
-            $token        = $salida['token'];
-            $nombreSalida = $salida['nombre'];
+            $nombreSalida = 'validado_' . pathinfo($file['name'], PATHINFO_FILENAME) . '.xlsx';
 
             if (!$sinObservaciones) {
                 $resumenReglas = $resultado->resumenPorRegla();
@@ -173,10 +151,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
             }
 
             Logger::info(sprintf(
-                'Validación completada: %s — %d atenciones, %d con observaciones',
+                'Validación completada: %s — %d atenciones, %d con observaciones — sesión %s',
                 $file['name'],
                 $totalAtenciones,
                 $totalFilasObs,
+                $sesionId ?? 'sin-sesion',
             ));
 
         } catch (\Throwable $e) {
@@ -197,7 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
 <body>
 <header class="site-header">
     <h1>Validador CPMS</h1>
-    <p>Sube el archivo de atenciones para generar el reporte de observaciones.</p>
+    <p>Sube el archivo de atenciones para generar el reporte de observaciones.
+       &nbsp;·&nbsp; <a href="auditorias.php" style="color:inherit;text-decoration:underline">Ver auditorías</a></p>
 </header>
 
 <main class="container">
@@ -235,7 +215,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
         </form>
     </section>
 
-    <?php if ($token && $sinObservaciones): ?>
+    <?php if ($sesionId): ?>
+    <div class="alert" style="background:#e8f4fd;border-left:4px solid #3b82f6;color:#1e40af;margin-bottom:0">
+        Sesión de auditoría creada:
+        <strong style="font-family:monospace"><?= htmlspecialchars($sesionId) ?></strong>
+        &nbsp;·&nbsp;
+        <a href="revisar.php?id=<?= htmlspecialchars($sesionId) ?>" style="color:#1e40af;font-weight:600">Revisar prestaciones →</a>
+        &nbsp;·&nbsp;
+        <a href="auditorias.php" style="color:#1e40af">Ver auditorías</a>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($sesionId && $sinObservaciones): ?>
 
     <section class="card card-clean">
         <div class="clean-inner">
@@ -246,13 +237,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
                    Se procesaron <strong><?= number_format($totalAtenciones) ?></strong> atenciones.</p>
             </div>
         </div>
-        <a href="descargar.php?token=<?= htmlspecialchars($token) ?>"
+        <a href="descargar.php?id=<?= htmlspecialchars($sesionId) ?>"
            class="btn btn-success" style="margin-top:1.25rem">
             ⬇&nbsp;Descargar <?= htmlspecialchars($nombreSalida ?? '') ?>
         </a>
     </section>
 
-    <?php elseif ($token && $resultado): ?>
+    <?php elseif ($sesionId && $resultado): ?>
 
     <section class="card download-card">
         <div class="download-inner">
@@ -260,7 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['archivo'])) {
                 <h2>Archivo listo</h2>
                 <p>El Excel contiene las columnas ACCIÓN SUGERIDA y MOTIVO DE OBSERVACIÓN marcadas por regla.</p>
             </div>
-            <a href="descargar.php?token=<?= htmlspecialchars($token) ?>"
+            <a href="descargar.php?id=<?= htmlspecialchars($sesionId) ?>"
                class="btn btn-success btn-lg">
                 ⬇&nbsp;Descargar <?= htmlspecialchars($nombreSalida ?? '') ?>
             </a>

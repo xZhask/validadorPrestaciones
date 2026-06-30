@@ -7,13 +7,13 @@ namespace Validador\Reglas;
 use Validador\Observacion;
 
 /**
- * Regla genérica parametrizable: si una atención contiene 2 o más códigos
- * pertenecientes al grupo definido, conserva el de mayor valor económico y
- * marca los demás con REVISAR — conservar {código de mayor valor}.
+ * Regla genérica parametrizable para grupos de códigos redundantes.
  *
- * Se instancia dos veces en index.php:
- *   · Hemograma  — prioridad 2 / color ámbar
- *   · Urocultivo — prioridad 1 / color turquesa
+ * Si una atención contiene 2 o más códigos DISTINTOS del grupo, conserva
+ * el de mayor valor económico y marca los demás con ELIMINAR.
+ *
+ * Se instancia para Urocultivo — prioridad 2 / color turquesa.
+ * (Hemograma usa su propia ReglaHemograma IPRESS-aware.)
  */
 class ReglaRedundanciaGrupo implements ReglaInterface
 {
@@ -21,10 +21,10 @@ class ReglaRedundanciaGrupo implements ReglaInterface
     private array $lookup;
 
     /**
-     * @param string   $codigoRegla   Identificador único ('HEMOGRAMA', 'UROCULTIVO', …)
+     * @param string   $codigoRegla   Identificador único ('UROCULTIVO', …)
      * @param string   $nombreRegla   Nombre legible para leyenda
-     * @param string   $color         Hex RGB sin # (p.ej. 'FFE599')
-     * @param int      $prioridad     Mayor = más prioritario en conflicto
+     * @param string   $colorHex      Hex RGB sin # (p.ej. 'B7E1E4')
+     * @param int      $prioridadVal  Mayor = más prioritario en conflicto
      * @param string[] $codigos       Códigos CPMS normalizados que forman el grupo
      */
     public function __construct(
@@ -62,19 +62,19 @@ class ReglaRedundanciaGrupo implements ReglaInterface
         $maxPorCodigo = [];
         foreach ($porCodigo as $cod => $filas) {
             $maxPorCodigo[$cod] = max(array_map(
-                static fn(array $f): float => $f['valor'] ?? 0.0,
+                static fn(array $f): float => (float) ($f['valor'] ?? 0.0),
                 $filas
             ));
         }
 
-        // El código a conservar: mayor valor máximo; en empate, menor fila de primera ocurrencia
+        // El código a conservar: mayor valor máximo
         arsort($maxPorCodigo);
-        $codigoConservar = (string) array_key_first($maxPorCodigo);
+        $conservar = (string) array_key_first($maxPorCodigo);
 
         // Marcar TODAS las filas de los códigos que NO se conservan
         $obs = [];
         foreach ($porCodigo as $cod => $filas) {
-            if ($cod === $codigoConservar) {
+            if ($cod === $conservar) {
                 continue;
             }
             foreach ($filas as $f) {
@@ -87,8 +87,8 @@ class ReglaRedundanciaGrupo implements ReglaInterface
                     reglaNombre: $this->nombre(),
                     prioridad:   $this->prioridad(),
                     color:       $this->color(),
-                    motivo:      "Redundancia de {$this->nombreRegla} — conservar código {$codigoConservar} (mayor valor)",
-                    accion:      "REVISAR — conservar {$codigoConservar}",
+                    motivo:      "Redundancia de {$this->nombreRegla}; conservar el código {$conservar} (mayor valor)",
+                    accion:      'ELIMINAR',
                 );
             }
         }

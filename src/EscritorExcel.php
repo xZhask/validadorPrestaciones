@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Validador;
 
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -104,6 +105,107 @@ class EscritorExcel
         (new Xlsx($spreadsheet))->save("{$dir}/{$token}.xlsx");
 
         return ['token' => $token, 'nombre' => $nombreSalida];
+    }
+
+    /**
+     * Genera el Excel de salida a partir del original.xlsx y el estado.json
+     * de una sesión, sin necesitar el ResultadoValidacion en memoria.
+     *
+     * Devuelve la ruta del archivo temporal generado; el llamador debe
+     * eliminarlo tras transmitirlo al cliente.
+     */
+    public function generarDesdeSession(string $rutaOriginal, array $estado): string
+    {
+        $spreadsheet = IOFactory::load($rutaOriginal);
+        $hoja        = $this->cfg['hoja'] ?? 'DATA';
+        $sheet       = $spreadsheet->getSheetByName($hoja) ?? $spreadsheet->getActiveSheet();
+
+        $colIndex  = Coordinate::columnIndexFromString($sheet->getHighestColumn());
+        $letAccion = Coordinate::stringFromColumnIndex($colIndex + 1);
+        $letMotivo = Coordinate::stringFromColumnIndex($colIndex + 2);
+
+        $sheet->getCell($letAccion . '1')->setValue('ACCIÓN SUGERIDA');
+        $sheet->getCell($letMotivo . '1')->setValue('MOTIVO DE OBSERVACIÓN');
+        $this->estiloEncabezado($sheet, $letAccion . '1');
+        $this->estiloEncabezado($sheet, $letMotivo . '1');
+        $sheet->getColumnDimension($letAccion)->setWidth(28);
+        $sheet->getColumnDimension($letMotivo)->setWidth(60);
+
+        foreach ($this->resolverObservacionesEstado($estado) as $fila => $res) {
+            $sheet->getCell($letAccion . $fila)->setValue($res['accion']);
+            $sheet->getCell($letMotivo  . $fila)->setValue($res['motivo']);
+
+            $sheet->getStyle("{$letAccion}{$fila}")
+                  ->getFill()->setFillType(Fill::FILL_SOLID)
+                  ->getStartColor()->setRGB($res['color']);
+
+            $sheet->getStyle("{$letMotivo}{$fila}")->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $res['color']]],
+                'alignment' => ['wrapText' => true],
+            ]);
+        }
+
+        $tmp = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'validador_' . bin2hex(random_bytes(8)) . '.xlsx';
+        (new Xlsx($spreadsheet))->save($tmp);
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        return $tmp;
+    }
+
+    /**
+     * Reconstruye la resolución fila→{accion, motivo, color} desde el estado JSON.
+     *
+     * Replica la lógica de ResultadoValidacion::resolucionPorFila():
+     * - accion y color vienen de la observación de mayor prioridad en la fila
+     * - motivo es la concatenación única de todos los motivos (orden de prioridad DESC)
+     *
+     * @return array<int, array{accion:string, motivo:string, color:string}>
+     */
+    private function resolverObservacionesEstado(array $estado): array
+    {
+        $porFila = [];
+
+        foreach ($estado['prestaciones'] as $prestacion) {
+            foreach (($prestacion['observaciones'] ?? []) as $fila => $listaObs) {
+                $fila = (int) $fila;
+
+                // Ordenar por prioridad DESC para que [0] sea el dominante
+                usort($listaObs, static fn(array $a, array $b): int =>
+                    (int) ($b['prioridad'] ?? 0) <=> (int) ($a['prioridad'] ?? 0)
+                );
+
+                if (!isset($porFila[$fila])) {
+                    $porFila[$fila] = [
+                        'prioridad' => (int) ($listaObs[0]['prioridad'] ?? 0),
+                        'accion'    => $listaObs[0]['accion'],
+                        'color'     => $listaObs[0]['color'] ?? 'CCCCCC',
+                        'motivos'   => [],
+                    ];
+                } elseif ((int) ($listaObs[0]['prioridad'] ?? 0) > $porFila[$fila]['prioridad']) {
+                    $porFila[$fila]['prioridad'] = (int) ($listaObs[0]['prioridad'] ?? 0);
+                    $porFila[$fila]['accion']    = $listaObs[0]['accion'];
+                    $porFila[$fila]['color']     = $listaObs[0]['color'] ?? 'CCCCCC';
+                }
+
+                foreach ($listaObs as $obs) {
+                    if (!in_array($obs['motivo'], $porFila[$fila]['motivos'], true)) {
+                        $porFila[$fila]['motivos'][] = $obs['motivo'];
+                    }
+                }
+            }
+        }
+
+        $result = [];
+        foreach ($porFila as $fila => $r) {
+            $result[$fila] = [
+                'accion' => $r['accion'],
+                'motivo' => implode(' || ', $r['motivos']),
+                'color'  => $r['color'],
+            ];
+        }
+        ksort($result);
+        return $result;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
