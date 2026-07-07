@@ -211,6 +211,19 @@ class GestorSesiones
         $estado  = $this->cargar($id);
         $porFila = $resultado->porFila();
 
+        // Capturar qué observaciones de sistema estaban marcadas como revisadas
+        // antes de limpiarlas, para restaurar ese estado al reinsertarlas.
+        $revisadasPrevias = [];
+        foreach ($estado['prestaciones'] as $pk => $prestacion) {
+            foreach ($prestacion['observaciones'] ?? [] as $fila => $lista) {
+                foreach ($lista as $obs) {
+                    if (($obs['origen'] ?? '') === 'sistema' && !empty($obs['revisada'])) {
+                        $revisadasPrevias[$pk][(string) $fila][$obs['regla']] = true;
+                    }
+                }
+            }
+        }
+
         // Conservar solo observaciones manuales en cada prestación
         foreach ($estado['prestaciones'] as $pk => &$prestacion) {
             $soloManuales = [];
@@ -248,6 +261,7 @@ class GestorSesiones
                     'color'     => $obs->color,
                     'prioridad' => $obs->prioridad,
                     'origen'    => 'sistema',
+                    'revisada'  => $revisadasPrevias[$pkStr][$filaStr][$obs->reglaCodigo] ?? false,
                 ];
                 $total++;
             }

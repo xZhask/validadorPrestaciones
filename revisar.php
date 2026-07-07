@@ -292,7 +292,7 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
                 <option value="ELIMINAR">ELIMINAR</option>
                 <option value="REVISAR">REVISAR</option>
                 <option value="AGREGAR">AGREGAR</option>
-                <option value="CONSERVAR">CONSERVAR</option>
+                <option value="CAMBIAR POR">CAMBIAR POR</option>
             </select>
         </div>
         <div id="dlgCantidadWrap" style="display:none">
@@ -302,6 +302,10 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
         <div>
             <label class="field-lbl" for="dlgMotivo">Motivo</label>
             <textarea class="field-ta" id="dlgMotivo" placeholder="Describe el motivo…"></textarea>
+        </div>
+        <div id="dlgCambioWrap" style="display:none">
+            <label class="field-lbl" for="dlgCambioCodigo">Cambiar por (nuevo código CPMS)</label>
+            <input type="text" class="field-sel" id="dlgCambioCodigo" placeholder="Escribe el código nuevo">
         </div>
     </div>
     <div class="dlg-foot">
@@ -771,6 +775,8 @@ function abrirAgregar(fila) {
     document.getElementById('dlgAccion').value = 'ELIMINAR';
     document.getElementById('dlgCantidad').value = '1';
     document.getElementById('dlgCantidadWrap').style.display = 'none';
+    document.getElementById('dlgCambioCodigo').value = '';
+    document.getElementById('dlgCambioWrap').style.display = 'none';
     document.getElementById('dlgMotivo').value = '';
     document.getElementById('dlgObs').showModal();
 }
@@ -781,22 +787,34 @@ function abrirEditar(fila, idx) {
     dlgMode = 'edit'; dlgFila = fila; dlgIdx = idx;
     document.getElementById('dlgTitulo').textContent = `Editar observación — Fila ${fila}`;
     const mQty = (obs.accion || '').match(/^AGREGAR\s*[—\-]\s*cantidad\s*=\s*(\d+)/i);
+    const mCmb = (obs.accion || '').match(/^CAMBIAR POR\s*(.*)$/i);
     if (mQty) {
         document.getElementById('dlgAccion').value = 'AGREGAR';
         document.getElementById('dlgCantidad').value = mQty[1];
         document.getElementById('dlgCantidadWrap').style.display = '';
+        document.getElementById('dlgCambioCodigo').value = '';
+        document.getElementById('dlgCambioWrap').style.display = 'none';
+    } else if (mCmb) {
+        document.getElementById('dlgAccion').value = 'CAMBIAR POR';
+        document.getElementById('dlgCambioCodigo').value = mCmb[1].trim();
+        document.getElementById('dlgCambioWrap').style.display = '';
+        document.getElementById('dlgCantidad').value = '1';
+        document.getElementById('dlgCantidadWrap').style.display = 'none';
     } else {
         document.getElementById('dlgAccion').value = obs.accion || 'ELIMINAR';
         document.getElementById('dlgCantidad').value = '1';
         document.getElementById('dlgCantidadWrap').style.display = 'none';
+        document.getElementById('dlgCambioCodigo').value = '';
+        document.getElementById('dlgCambioWrap').style.display = 'none';
     }
     document.getElementById('dlgMotivo').value = obs.motivo || '';
     document.getElementById('dlgObs').showModal();
 }
 
 document.getElementById('dlgAccion').addEventListener('change', () => {
-    document.getElementById('dlgCantidadWrap').style.display =
-        document.getElementById('dlgAccion').value === 'AGREGAR' ? '' : 'none';
+    const v = document.getElementById('dlgAccion').value;
+    document.getElementById('dlgCantidadWrap').style.display = v === 'AGREGAR'     ? '' : 'none';
+    document.getElementById('dlgCambioWrap').style.display   = v === 'CAMBIAR POR' ? '' : 'none';
 });
 
 document.getElementById('dlgGuardar').addEventListener('click', async () => {
@@ -804,6 +822,9 @@ document.getElementById('dlgGuardar').addEventListener('click', async () => {
     if (accion === 'AGREGAR') {
         const n = parseInt(document.getElementById('dlgCantidad').value, 10) || 1;
         accion = `AGREGAR — cantidad = ${n}`;
+    } else if (accion === 'CAMBIAR POR') {
+        const cod = document.getElementById('dlgCambioCodigo').value.trim();
+        accion = cod ? `CAMBIAR POR ${cod}` : 'CAMBIAR POR';
     }
     const motivo = document.getElementById('dlgMotivo').value.trim();
     if (!motivo) { toast('El motivo es obligatorio', 'err'); return; }

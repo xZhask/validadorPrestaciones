@@ -13,9 +13,11 @@ function construirMotor(array $cfg): MotorValidacion
     $m = new MotorValidacion();
 
     foreach ([
-        ['PROHIBIDO_93784', 'Código 93784 no permitido (tipo 2 y 3)', '93784', ['2', '3']],
-        ['PROHIBIDO_99246', 'Código 99246 no permitido (tipo 2 y 3)', '99246', ['2', '3']],
-        ['PROHIBIDO_15000', 'Código 15000 no permitido (trasplantes, Nivel II)', '15000', []],
+        ['PROHIBIDO_93784',    'Código 93784 no permitido (tipo 2 y 3)',    '93784',    ['2', '3']],
+        ['PROHIBIDO_99246',    'Código 99246 no permitido (tipo 2 y 3)',    '99246',    ['2', '3']],
+        ['PROHIBIDO_99246.01', 'Código 99246.01 no permitido (tipo 2 y 3)', '99246.01', ['2', '3']],
+        ['PROHIBIDO_99246.02', 'Código 99246.02 no permitido (tipo 2 y 3)', '99246.02', ['2', '3']],
+        ['PROHIBIDO_15000',    'Código 15000 no permitido (trasplantes, Nivel II)', '15000', []],
     ] as [$rc, $rn, $cod, $tipos]) {
         $m->registrar(new ReglaCodigoNoPermitidoPorTipo(
             codigoRegla:     $rc,
