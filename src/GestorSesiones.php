@@ -200,6 +200,64 @@ class GestorSesiones
     }
 
     /**
+     * Re-ejecuta las observaciones de sistema sobre la sesión existente,
+     * conservando las observaciones manuales y el flag validada de cada prestación.
+     *
+     * @return int Número de nuevas observaciones de sistema insertadas
+     */
+    public function revalidar(string $id, ResultadoValidacion $resultado): int
+    {
+        $this->validarId($id);
+        $estado  = $this->cargar($id);
+        $porFila = $resultado->porFila();
+
+        // Conservar solo observaciones manuales en cada prestación
+        foreach ($estado['prestaciones'] as $pk => &$prestacion) {
+            $soloManuales = [];
+            foreach ($prestacion['observaciones'] ?? [] as $fila => $lista) {
+                $filtradas = array_values(
+                    array_filter($lista, static fn(array $o): bool => ($o['origen'] ?? '') === 'manual')
+                );
+                if ($filtradas !== []) {
+                    $soloManuales[(string) $fila] = $filtradas;
+                }
+            }
+            $prestacion['observaciones'] = $soloManuales;
+        }
+        unset($prestacion);
+
+        // Insertar nuevas observaciones de sistema,
+        // pero saltar si el usuario ya editó manualmente esa regla en esa fila.
+        $total = 0;
+        foreach ($porFila as $fila => $listaObs) {
+            foreach ($listaObs as $obs) {
+                $filaStr = (string) $fila;
+                $pkStr   = $obs->pk;
+
+                $existentes = $estado['prestaciones'][$pkStr]['observaciones'][$filaStr] ?? [];
+                foreach ($existentes as $ex) {
+                    if (($ex['origen'] ?? '') === 'manual' && ($ex['regla'] ?? '') === $obs->reglaCodigo) {
+                        continue 2;
+                    }
+                }
+
+                $estado['prestaciones'][$pkStr]['observaciones'][$filaStr][] = [
+                    'regla'     => $obs->reglaCodigo,
+                    'accion'    => $obs->accion,
+                    'motivo'    => $obs->motivo,
+                    'color'     => $obs->color,
+                    'prioridad' => $obs->prioridad,
+                    'origen'    => 'sistema',
+                ];
+                $total++;
+            }
+        }
+
+        $this->guardar($id, $estado);
+        return $total;
+    }
+
+    /**
      * Devuelve la primera prestación no validada, o null si todas están validadas.
      */
     public function primeraPendiente(array $estado): ?string

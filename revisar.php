@@ -72,6 +72,10 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .btn-dl{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;border-radius:var(--radius);padding:8px 14px;border:none;background:var(--accent);color:#fff;text-decoration:none;cursor:pointer;white-space:nowrap}
 .btn-dl:hover{background:var(--accent-ink)}
 .btn-dl svg{width:16px;height:16px;stroke-width:2;fill:none;stroke:currentColor}
+.btn-revalidar{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;border-radius:var(--radius);padding:8px 14px;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit}
+.btn-revalidar:hover{background:var(--surface-2);color:var(--ink)}
+.btn-revalidar:disabled{opacity:.5;cursor:not-allowed}
+.btn-revalidar svg{width:16px;height:16px;stroke-width:2;fill:none;stroke:currentColor}
 
 /* ── Shell ────────────────────────────────────────────────────────────── */
 .shell{display:grid;grid-template-columns:300px 1fr;flex:1;overflow:hidden}
@@ -100,7 +104,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 /* ── Detail ───────────────────────────────────────────────────────────── */
 .detail{overflow-y:auto;padding:18px 22px 40px;background:var(--bg)}
 .det-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;color:var(--muted);font-size:.9rem}
-.det-empty-ico{font-size:2.5rem}
+.det-empty-ico{display:flex;justify-content:center;color:var(--faint)}.det-empty-ico svg{width:40px;height:40px;stroke-width:1.5;fill:none;stroke:currentColor}
 
 /* Gen card */
 .gen{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
@@ -108,6 +112,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .gen .ctx{font-size:13px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .pill{font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--ink)}
 .pill-fecha{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.badge-dias{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:#e0f2f1;border:1px solid #4db6ac;color:#00695c;font-family:var(--mono);white-space:nowrap}
 .dx{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
 .dx .pill b{font-family:var(--mono);font-weight:500;margin-right:4px}
 
@@ -231,6 +236,10 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
             <span class="tb-bar-fill" id="sbProgBar"></span>
         </div>
     </div>
+    <button class="btn-revalidar" id="btnRevalidar" onclick="revalidarSesion()">
+        <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        Re-validar
+    </button>
     <a href="descargar.php?id=<?= htmlspecialchars($id) ?>" class="btn-dl">
         <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
         Descargar Excel
@@ -257,7 +266,11 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
     <!-- ── Detail ─────────────────────────────────────────────────────────── -->
     <main class="detail" id="detPanel">
         <div class="det-empty" id="detEmpty">
-            <span class="det-empty-ico">📋</span>
+            <span class="det-empty-ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7h18M3 12h18M3 17h18"/>
+                </svg>
+            </span>
             <strong>Selecciona una prestación</strong>
             <span>del listado de la izquierda</span>
         </div>
@@ -392,6 +405,15 @@ function formatRangoFechas(inicio, fin) {
         return `${pi[0]}/${pi[1]} → ${fin}`;
     }
     return `${inicio} → ${fin}`;
+}
+
+function calcularDias(inicio, fin) {
+    if (!inicio || !fin) return null;
+    const [d1, m1, y1] = inicio.split('/').map(Number);
+    const [d2, m2, y2] = fin.split('/').map(Number);
+    if (!y1 || !y2) return null;
+    const diff = Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000) + 1;
+    return diff > 0 ? diff : null;
 }
 
 function familiaDeRegla(regla) {
@@ -565,13 +587,17 @@ function renderDetalle() {
     const chkSvg = `<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>`;
 
     const fechaRango = formatRangoFechas(d.fecha_inicio || '', d.fecha_fin || '');
+    const dias = calcularDias(d.fecha_inicio || '', d.fecha_fin || '');
+    const diasBadge = dias !== null
+        ? `<span class="badge-dias">${dias}&nbsp;día${dias === 1 ? '' : 's'}</span>`
+        : '';
     const html = `
         <div class="gen">
             <div>
                 <div class="pk">${h(d.pk)}</div>
                 <div class="ctx">
                     <span class="pill">${h(d.ipress_nom)}</span>
-                    ${fechaRango ? `<span class="pill pill-fecha">${h(fechaRango)}</span>` : ''}
+                    ${fechaRango ? `<span class="pill pill-fecha">${h(fechaRango)}</span>${diasBadge}` : ''}
                 </div>
                 ${dxHtml ? `<div class="dx">${dxHtml}</div>` : ''}
             </div>
@@ -708,6 +734,29 @@ async function toggleValidar() {
     } catch (e) {
         toast('Error: ' + e.message, 'err');
         btn.disabled = false;
+    }
+}
+
+// ── Re-validar sesión ──────────────────────────────────────────────────────
+async function revalidarSesion() {
+    if (!confirm('Se re-ejecutarán todas las reglas automáticas sobre el archivo original.\nLas observaciones manuales y el estado de validación se conservarán.\n\n¿Continuar?')) return;
+    const btn = document.getElementById('btnRevalidar');
+    btn.disabled = true;
+    btn.textContent = 'Re-validando…';
+    try {
+        const r = await apiPost('revalidar', { id: SESION_ID });
+        toast(`Re-validación completa: ${r.observaciones_sistema} obs. de sistema`, 'ok');
+        sesionData = await apiGet('sesion', { id: SESION_ID });
+        renderSidebar();
+        if (pkActual) {
+            detalleData = await apiGet('prestacion', { id: SESION_ID, pk: pkActual });
+            renderDetalle();
+        }
+    } catch (e) {
+        toast('Error al re-validar: ' + e.message, 'err');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Re-validar';
     }
 }
 

@@ -72,6 +72,7 @@ try {
         'POST:validar'        => rutaPostValidar($gestor),
         'POST:revisar-obs'    => rutaPostRevisarObs($gestor),
         'POST:revisar-grupo'  => rutaPostRevisarGrupo($gestor),
+        'POST:revalidar'      => rutaPostRevalidar($gestor, $cfg),
         default               => jsonError("Ruta no encontrada: {$method} {$ruta}", 404),
     };
 } catch (\Throwable $e) {
@@ -495,4 +496,26 @@ function rutaPostValidar(GestorSesiones $gestor): never
     $gestor->guardar($id, $estado);
 
     jsonOk(['validada' => $estado['prestaciones'][$pkStr]['validada']]);
+}
+
+// ── POST revalidar ────────────────────────────────────────────────────────────
+function rutaPostRevalidar(GestorSesiones $gestor, array $cfg): never
+{
+    $body = bodyJson();
+    $id   = req($body, 'id');
+
+    $ruta_excel = $gestor->rutaOriginal($id);
+    if (!file_exists($ruta_excel)) {
+        jsonError('No se encontró el archivo original de la sesión.', 404);
+    }
+
+    $lector    = new LectorExcel();
+    $datos     = $lector->cargar($ruta_excel);
+    $motor     = construirMotor($cfg);
+    $resultado = $motor->validar($datos['atenciones']);
+    unset($datos);
+
+    $total = $gestor->revalidar($id, $resultado);
+
+    jsonOk(['observaciones_sistema' => $total]);
 }

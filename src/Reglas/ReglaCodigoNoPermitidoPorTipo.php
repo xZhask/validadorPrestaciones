@@ -55,9 +55,13 @@ class ReglaCodigoNoPermitidoPorTipo implements ReglaInterface
             if ($f['codigo'] !== $this->codigoCpms) {
                 continue;
             }
-            if (!isset($this->tiposLookup[(string) $f['tipo']])) {
+            if (!empty($this->tiposLookup) && !isset($this->tiposLookup[(string) $f['tipo']])) {
                 continue;
             }
+
+            $motivo = empty($this->tiposLookup)
+                ? "Código {$this->codigoCpms} no permitido en este nivel de atención"
+                : "Código {$this->codigoCpms} no permitido en TIPO DE ATENCIÓN {$f['tipo']}";
 
             $obs[] = new Observacion(
                 fila:        $f['fila'],
@@ -68,7 +72,7 @@ class ReglaCodigoNoPermitidoPorTipo implements ReglaInterface
                 reglaNombre: $this->nombre(),
                 prioridad:   $this->prioridad(),
                 color:       $this->color(),
-                motivo:      "Código {$this->codigoCpms} no permitido en TIPO DE ATENCIÓN {$f['tipo']}",
+                motivo:      $motivo,
                 accion:      $this->accionTexto,
             );
         }

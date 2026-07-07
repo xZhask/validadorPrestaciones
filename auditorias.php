@@ -117,7 +117,9 @@ try {
     <?php if (empty($sesiones)): ?>
     <section class="card">
         <div class="empty-state">
-            <p style="font-size:2rem">📂</p>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;stroke:var(--text-muted,#888);display:block;margin:0 auto .5rem">
+                <path d="M3 7h18M3 12h18M3 17h18"/>
+            </svg>
             <p><strong>No hay sesiones de auditoría todavía.</strong></p>
             <p>Sube un archivo Excel desde el <a href="index.php">validador</a> para crear la primera sesión.</p>
         </div>
