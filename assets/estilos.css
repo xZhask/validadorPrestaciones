@@ -10,6 +10,65 @@
     --text-muted: #64748b;
     --green:      #198754;
     --radius:     8px;
+    --card-bg:    #ffffff;
+    --chip-bg:    #f1f5f9;
+    --alert-err-bg: #fee2e2;
+    --alert-err-tx: #991b1b;
+    --alert-err-br: #fca5a5;
+    --note-bg:    #fef3c7;
+    --note-tx:    #92400e;
+    --note-br:    #fde68a;
+    --drop-br:    #94a3b8;
+    --req-sep:    #cbd5e1;
+    --hover-bg:   #f8fafc;
+    --header-tx:  #ffffff;
+    --badge-tx:   #1a1a2e;
+}
+
+:root[data-theme="dark"] {
+    --blue-dark:  #0f172a;
+    --blue-mid:   #1e293b;
+    --gray-bg:    #020617;
+    --gray-border:#334155;
+    --text:       #f8fafc;
+    --text-muted: #94a3b8;
+    --green:      #16a34a;
+    --card-bg:    #0f172a;
+    --chip-bg:    #1e293b;
+    --alert-err-bg: #450a0a;
+    --alert-err-tx: #fca5a5;
+    --alert-err-br: #7f1d1d;
+    --note-bg:    #422006;
+    --note-tx:    #fde68a;
+    --note-br:    #713f12;
+    --drop-br:    #475569;
+    --req-sep:    #334155;
+    --hover-bg:   #1e293b;
+    --header-tx:  #f8fafc;
+    --badge-tx:   #f8fafc;
+    --scroll-bg:  #0f172a;
+    --scroll-thumb: #334155;
+    --scroll-thumb-hover: #475569;
+}
+
+/* ── Custom Scrollbar ────────────────────────────────────────────────────── */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb, #cbd5e1) var(--scroll-bg, transparent);
+}
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+*::-webkit-scrollbar-track {
+    background: var(--scroll-bg, transparent);
+}
+*::-webkit-scrollbar-thumb {
+    background-color: var(--scroll-thumb, #cbd5e1);
+    border-radius: 10px;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scroll-thumb-hover, #94a3b8);
 }
 
 body {
@@ -23,9 +82,32 @@ body {
 /* ── Header ──────────────────────────────────────────────────────────────── */
 .site-header {
     background: var(--blue-dark);
-    color: #fff;
+    color: var(--header-tx);
     padding: 1.25rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+.site-header-content {
+    flex: 1;
+}
+.theme-btn {
+    background: transparent;
+    border: 1px solid var(--gray-border);
+    color: var(--header-tx);
+    border-radius: 99px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background .15s;
+    flex-shrink: 0;
+}
+.theme-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
 .site-header h1 { font-size: 1.4rem; margin-bottom: .2rem; }
 .site-header p  { opacity: .75; font-size: .85rem; }
 
@@ -37,7 +119,7 @@ body {
 }
 
 .card {
-    background: #fff;
+    background: var(--card-bg);
     border-radius: var(--radius);
     box-shadow: 0 1px 4px rgba(0,0,0,.08);
     padding: 1.5rem;
@@ -49,11 +131,11 @@ body {
 
 /* ── Alerts ───────────────────────────────────────────────────────────────── */
 .alert { padding: .85rem 1.1rem; border-radius: var(--radius); margin-bottom: 1rem; }
-.alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.alert-error { background: var(--alert-err-bg); color: var(--alert-err-tx); border: 1px solid var(--alert-err-br); }
 
 /* ── Drop zone ───────────────────────────────────────────────────────────── */
 .drop-zone {
-    border: 2px dashed #94a3b8;
+    border: 2px dashed var(--drop-br);
     border-radius: var(--radius);
     padding: 2.25rem 1rem;
     text-align: center;
@@ -85,9 +167,9 @@ body {
     pointer-events: none;
 }
 .req-label { font-weight: 600; }
-.req-sep   { color: #cbd5e1; }
+.req-sep   { color: var(--req-sep); }
 .req-chip {
-    background: #f1f5f9;
+    background: var(--chip-bg);
     border: 1px solid var(--gray-border);
     border-radius: 4px;
     padding: .1rem .45rem;
@@ -133,7 +215,7 @@ body {
     gap: 1rem;
 }
 .clean-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
-.card-clean h2 { margin-bottom: .35rem; color: #166534; }
+.card-clean h2 { margin-bottom: .35rem; color: var(--green); }
 .card-clean p  { color: var(--text-muted); font-size: .88rem; }
 
 /* ── Download card ────────────────────────────────────────────────────────── */
@@ -163,7 +245,7 @@ body {
 }
 
 .metric-card {
-    background: #fff;
+    background: var(--card-bg);
     border-radius: var(--radius);
     box-shadow: 0 1px 4px rgba(0,0,0,.08);
     padding: 1.25rem 1.5rem;
@@ -269,7 +351,7 @@ body {
     padding: .35rem .85rem;
     border-radius: 99px;
     border: 1px solid var(--gray-border);
-    background: #fff;
+    background: var(--card-bg);
     font-size: .8rem;
     cursor: pointer;
     transition: background .15s, border-color .15s, color .15s;
@@ -277,7 +359,7 @@ body {
 }
 .chip:hover:not(.active) {
     background: var(--gray-bg);
-    border-color: #94a3b8;
+    border-color: var(--drop-br);
 }
 /* "Todas" chip (sin --chip-c) activo: fondo azul oscuro + texto blanco */
 .chip.active {
@@ -301,9 +383,9 @@ body {
 /* ── Table note ──────────────────────────────────────────────────────────── */
 .table-note {
     font-size: .82rem;
-    color: #92400e;
-    background: #fef3c7;
-    border: 1px solid #fde68a;
+    color: var(--note-tx);
+    background: var(--note-bg);
+    border: 1px solid var(--note-br);
     border-radius: var(--radius);
     padding: .6rem .9rem;
     margin-bottom: .75rem;
@@ -338,7 +420,7 @@ body {
     transition: background .1s;
 }
 #tablaObs tbody tr:last-child { border-bottom: none; }
-#tablaObs tbody tr:hover { background: #f8fafc; }
+#tablaObs tbody tr:hover { background: var(--hover-bg); }
 #tablaObs td {
     padding: .55rem .85rem;
     vertical-align: top;
@@ -357,7 +439,7 @@ body {
     border-radius: 4px;
     font-size: .75rem;
     font-weight: 500;
-    color: #1a1a2e;
-    border: 1px solid rgba(0,0,0,.08);
+    color: var(--badge-tx);
+    border: 1px solid var(--gray-border);
     white-space: nowrap;
 }

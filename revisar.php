@@ -34,6 +34,7 @@ $idJson     = json_encode($id, JSON_UNESCAPED_UNICODE);
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="assets/theme.js"></script>
 <link rel="stylesheet" href="assets/estilos.css">
 <style>
 /* ── Tokens del mockup ────────────────────────────────────────────────── */
@@ -48,8 +49,26 @@ $idJson     = json_encode($id, JSON_UNESCAPED_UNICODE);
     --uro-st:#1d9e75;  --uro-bg:#e1f5ee;  --uro-tx:#085041;
     --sug-st:#2f7ed8;  --sug-bg:#e6f1fb;  --sug-tx:#0c447c;
     --man-st:#6b7280;  --man-bg:#eef0f2;  --man-tx:#3f4651;
+    --badge-dias-bg: #e0f2f1; --badge-dias-br: #4db6ac; --badge-dias-tx: #00695c;
+    --man-tag-bg: #fef9c3; --man-tag-br: #fde047; --man-tag-tx: #854d0e;
+    --toast-ok: #166534; --toast-err: #b91c1c;
     --mono:"IBM Plex Mono",ui-monospace,monospace;
     --radius:8px;
+}
+:root[data-theme="dark"] {
+    --ink:#f8fafc; --muted:#94a3b8; --faint:#64748b;
+    --bg:#020617; --surface:#0f172a; --surface-2:#1e293b;
+    --line:#334155; --line-strong:#475569;
+    --accent:#16a34a; --accent-ink:#22c55e; --accent-bg:#064e3b;
+    --tipo-st:#fca5a5; --tipo-bg:#450a0a; --tipo-tx:#fca5a5;
+    --dup-st:#a78bfa;  --dup-bg:#2e1065;  --dup-tx:#a78bfa;
+    --hemo-st:#fcd34d; --hemo-bg:#422006; --hemo-tx:#fde68a;
+    --uro-st:#6ee7b7;  --uro-bg:#064e3b;  --uro-tx:#a7f3d0;
+    --sug-st:#93c5fd;  --sug-bg:#1e3a8a;  --sug-tx:#bfdbfe;
+    --man-st:#94a3b8;  --man-bg:#1e293b;  --man-tx:#cbd5e1;
+    --badge-dias-bg: #064e3b; --badge-dias-br: #065f46; --badge-dias-tx: #6ee7b7;
+    --man-tag-bg: #422006; --man-tag-br: #713f12; --man-tag-tx: #fde68a;
+    --toast-ok: #15803d; --toast-err: #7f1d1d;
 }
 *{box-sizing:border-box}
 html,body{height:100%;overflow:hidden;margin:0;background:var(--bg)}
@@ -76,6 +95,8 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .btn-revalidar:hover{background:var(--surface-2);color:var(--ink)}
 .btn-revalidar:disabled{opacity:.5;cursor:not-allowed}
 .btn-revalidar svg{width:16px;height:16px;stroke-width:2;fill:none;stroke:currentColor}
+.theme-btn-ix { background: transparent; border: 1px solid var(--line-strong); color: var(--muted); border-radius: 99px; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; transition: background .15s, color .15s; margin-left: 12px; }
+.theme-btn-ix:hover { background: var(--surface-2); color: var(--ink); }
 
 /* ── Shell ────────────────────────────────────────────────────────────── */
 .shell{display:grid;grid-template-columns:300px 1fr;flex:1;overflow:hidden}
@@ -88,7 +109,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .rail-search:focus{outline:none;border-color:var(--accent)}
 .seg{display:flex;gap:4px;margin-bottom:6px}
 .seg button{flex:1;font-size:12px;padding:5px;border:1px solid var(--line);background:var(--surface);border-radius:6px;color:var(--muted);cursor:pointer;font-family:inherit;transition:background .1s,color .1s}
-.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .rail-count{font-size:12px;color:var(--muted);margin-top:4px}
 .plist{padding:8px;flex:1}
 .pitem{display:flex;gap:10px;align-items:flex-start;padding:10px 11px;border-radius:var(--radius);cursor:pointer;border:1px solid transparent;transition:background .1s}
@@ -112,7 +133,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .gen .ctx{font-size:13px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .pill{font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--ink)}
 .pill-fecha{font-family:var(--mono);font-size:11px;color:var(--muted)}
-.badge-dias{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:#e0f2f1;border:1px solid #4db6ac;color:#00695c;font-family:var(--mono);white-space:nowrap}
+.badge-dias{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--badge-dias-bg);border:1px solid var(--badge-dias-br);color:var(--badge-dias-tx);font-family:var(--mono);white-space:nowrap}
 .dx{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
 .dx .pill b{font-family:var(--mono);font-weight:500;margin-right:4px}
 
@@ -170,7 +191,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .icobtn.danger:hover{background:var(--tipo-bg);color:var(--tipo-tx)}
 .icobtn svg{width:14px;height:14px;stroke-width:2;fill:none;stroke:currentColor}
 .cmot{padding:4px 10px 9px 78px;font-size:12px;color:var(--muted);background:var(--surface-2);border-bottom:1px solid var(--line);line-height:1.4}
-.manual-tag{display:inline-block;font-size:.61rem;padding:.01rem .26rem;border-radius:3px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;margin-left:.22rem;vertical-align:middle}
+.manual-tag{display:inline-block;font-size:.61rem;padding:.01rem .26rem;border-radius:3px;background:var(--man-tag-bg);color:var(--man-tag-tx);border:1px solid var(--man-tag-br);margin-left:.22rem;vertical-align:middle}
 
 /* ── Sin observación ──────────────────────────────────────────────────── */
 .sitem{display:flex;align-items:center;gap:9px;padding:7px 10px;border-bottom:1px solid var(--line)}
@@ -184,7 +205,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .sbtn svg{width:13px;height:13px;stroke-width:2;fill:none;stroke:currentColor}
 
 /* ── Dialog ───────────────────────────────────────────────────────────── */
-dialog{border:none;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.22);padding:0;width:440px;max-width:95vw}
+dialog{border:none;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.22);padding:0;width:440px;max-width:95vw;background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.38)}
 .dlg-head{padding:.85rem 1.1rem;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
 .dlg-head h3{font-size:.92rem;margin:0}
@@ -193,7 +214,7 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
 .dlg-body{padding:1.1rem;display:flex;flex-direction:column;gap:.65rem}
 .dlg-foot{padding:.65rem 1.1rem;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:.45rem}
 .field-lbl{display:block;font-size:.76rem;font-weight:600;color:var(--muted);margin-bottom:.2rem}
-.field-sel,.field-ta{width:100%;padding:.45rem .7rem;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:.84rem;font-family:inherit;color:var(--ink)}
+.field-sel,.field-ta{width:100%;padding:.45rem .7rem;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:.84rem;font-family:inherit;color:var(--ink);background:var(--surface-2)}
 .field-sel:focus,.field-ta:focus{outline:none;border-color:var(--accent)}
 .field-ta{resize:vertical;min-height:65px}
 .btn-cancel{display:inline-flex;align-items:center;font-size:13px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit}
@@ -207,7 +228,7 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast-wrap{position:fixed;bottom:1.25rem;right:1.25rem;display:flex;flex-direction:column;gap:.4rem;z-index:9999}
 .toast{padding:.55rem .9rem;border-radius:10px;font-size:.82rem;background:var(--ink);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.22);animation:slideIn .18s ease}
-.toast.ok{background:#166534}.toast.err{background:#b91c1c}
+.toast.ok{background:var(--toast-ok)}.toast.err{background:var(--toast-err)}
 @keyframes slideIn{from{transform:translateX(40px);opacity:0}}
 [hidden]{display:none !important}
 </style>
@@ -230,6 +251,7 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
         </select>
     </div>
     <div class="spacer"></div>
+    <button class="theme-btn-ix" id="themeToggle" type="button"></button>
     <div class="tb-prog">
         <span class="meta" id="sbProgTxt">–</span>
         <div class="tb-bar">

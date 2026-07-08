@@ -30,7 +30,16 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auditorías — Validador CPMS</title>
     <link rel="stylesheet" href="assets/estilos.css">
+    <script src="assets/theme.js"></script>
     <style>
+        :root {
+            --bg-pend: #fff3cd; --tx-pend: #856404; --br-pend: #ffc107;
+            --bg-comp: #d1e7dd; --tx-comp: #0f5132; --br-comp: #a3cfbb;
+        }
+        :root[data-theme="dark"] {
+            --bg-pend: #422006; --tx-pend: #fde68a; --br-pend: #713f12;
+            --bg-comp: #064e3b; --tx-comp: #6ee7b7; --br-comp: #065f46;
+        }
         .progress-bar-wrap {
             background: var(--gray-border, #e2e8f0);
             border-radius: 99px;
@@ -51,13 +60,13 @@ try {
             vertical-align: middle;
             margin-left: 8px;
             font-size: 0.85rem;
-            color: #555;
+            color: var(--text-muted);
             white-space: nowrap;
         }
         .td-id {
             font-family: monospace;
             font-size: 0.78rem;
-            color: #888;
+            color: var(--text-muted);
             max-width: 120px;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -66,15 +75,15 @@ try {
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
-            color: #777;
+            color: var(--text-muted);
         }
         .empty-state p { margin: 0.5rem 0; }
-        .ipress-list { font-size: 0.82rem; color: #555; }
+        .ipress-list { font-size: 0.82rem; color: var(--text-muted); }
         .badge-pendiente {
             display: inline-block;
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffc107;
+            background: var(--bg-pend);
+            color: var(--tx-pend);
+            border: 1px solid var(--br-pend);
             border-radius: 4px;
             padding: 1px 7px;
             font-size: 0.78rem;
@@ -82,9 +91,9 @@ try {
         }
         .badge-completa {
             display: inline-block;
-            background: #d1e7dd;
-            color: #0f5132;
-            border: 1px solid #a3cfbb;
+            background: var(--bg-comp);
+            color: var(--tx-comp);
+            border: 1px solid var(--br-comp);
             border-radius: 4px;
             padding: 1px 7px;
             font-size: 0.78rem;
@@ -94,8 +103,11 @@ try {
 </head>
 <body>
 <header class="site-header">
-    <h1>Validador CPMS — Auditorías</h1>
-    <p>Sesiones de auditoría registradas. Cada subida genera una sesión independiente.</p>
+    <div class="site-header-content">
+        <h1>Validador CPMS — Auditorías</h1>
+        <p>Sesiones de auditoría registradas. Cada subida genera una sesión independiente.</p>
+    </div>
+    <button class="theme-btn" id="themeToggle" type="button" aria-label="Cambiar tema"></button>
 </header>
 
 <main class="container">
@@ -109,7 +121,7 @@ try {
 
     <div style="margin-bottom:1.5rem; display:flex; gap:1rem; align-items:center;">
         <a href="index.php" class="btn btn-outline">← Volver al validador</a>
-        <span style="color:#888; font-size:0.9rem;">
+        <span style="color:var(--text-muted); font-size:0.9rem;">
             <?= count($sesiones) ?> sesión<?= count($sesiones) !== 1 ? 'es' : '' ?> registrada<?= count($sesiones) !== 1 ? 's' : '' ?>
         </span>
     </div>
@@ -154,14 +166,14 @@ try {
                     <tr>
                         <td>
                             <strong><?= htmlspecialchars($s['archivo']) ?></strong>
-                            <div style="font-size:0.8rem;color:#888"><?= number_format($s['total']) ?> prestaciones</div>
+                            <div style="font-size:0.8rem;color:var(--text-muted)"><?= number_format($s['total']) ?> prestaciones</div>
                         </td>
                         <td style="white-space:nowrap"><?= htmlspecialchars($fechaFormato) ?></td>
                         <td class="ipress-list">
                             <?php if (!empty($s['ipress'])): ?>
                                 <?= htmlspecialchars(implode(', ', array_column($s['ipress'], 'nombre'))) ?>
                             <?php else: ?>
-                                <span style="color:#bbb">—</span>
+                                <span style="color:var(--text-muted)">—</span>
                             <?php endif; ?>
                         </td>
                         <td>

@@ -145,6 +145,7 @@ $colsOpcionales = array_values(array_slice($cfg['columnas'], 10));
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="assets/theme.js"></script>
     <style>
 /* ── Tokens ───────────────────────────────────────────────────────────────── */
 :root {
@@ -153,10 +154,38 @@ $colsOpcionales = array_values(array_slice($cfg['columnas'], 10));
     --line:#e0e5ea; --line-strong:#cdd4db;
     --accent:#1f7a52; --accent-ink:#19684a; --accent-bg:#e7f2ec; --accent-line:#cfe6da;
     --err-bg:#fcebeb; --err-line:#e5b0b0; --err-tx:#791f1f;
+    --success-bg:#166534; --success-hover:#14532d;
     --mono:"IBM Plex Mono",ui-monospace,monospace;
     --radius:8px;
 }
-*{box-sizing:border-box;margin:0;padding:0}
+:root[data-theme="dark"] {
+    --ink:#f8fafc; --muted:#94a3b8; --faint:#64748b;
+    --bg:#020617; --surface:#0f172a; --surface-2:#1e293b;
+    --line:#334155; --line-strong:#475569;
+    --accent:#16a34a; --accent-ink:#22c55e; --accent-bg:#064e3b; --accent-line:#065f46;
+    --err-bg:#450a0a; --err-line:#7f1d1d; --err-tx:#fca5a5;
+    --success-bg:#15803d; --success-hover:#16a34a;
+    --scroll-bg:#0f172a; --scroll-thumb:#334155; --scroll-thumb-hover:#475569;
+}
+* {
+    box-sizing:border-box;margin:0;padding:0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb, #cbd5e1) var(--scroll-bg, transparent);
+}
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+*::-webkit-scrollbar-track {
+    background: var(--scroll-bg, transparent);
+}
+*::-webkit-scrollbar-thumb {
+    background-color: var(--scroll-thumb, #cbd5e1);
+    border-radius: 10px;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scroll-thumb-hover, #94a3b8);
+}
 html{height:100%}
 body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size:14px;line-height:1.5;background:var(--bg);-webkit-font-smoothing:antialiased;min-height:100vh}
 
@@ -219,8 +248,8 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .ix-btn svg{width:15px;height:15px;stroke-width:2;fill:none;stroke:currentColor;flex-shrink:0}
 .ix-btn-primary{background:var(--accent);color:#fff}
 .ix-btn-primary:not(:disabled):hover{background:var(--accent-ink)}
-.ix-btn-success{background:#166534;color:#fff}
-.ix-btn-success:not(:disabled):hover{background:#14532d}
+.ix-btn-success{background:var(--success-bg);color:#fff}
+.ix-btn-success:not(:disabled):hover{background:var(--success-hover)}
 .ix-btn-outline{background:var(--surface);color:var(--muted);border:1px solid var(--line-strong)}
 .ix-btn-outline:hover{background:var(--surface-2);color:var(--ink)}
 
@@ -279,6 +308,23 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .ix-ses-bar-fill{height:100%;background:var(--accent);border-radius:99px}
 .ix-ses-pct{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;min-width:42px;text-align:right}
 .ix-no-sessions{text-align:center;padding:22px 10px;color:var(--faint);font-size:13px}
+.theme-btn-ix {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    border-radius: 99px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    margin-right: 12px;
+}
+.theme-btn-ix:hover {
+    background: var(--surface-2);
+    color: var(--ink);
+}
     </style>
 </head>
 <body>
@@ -293,6 +339,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
         </div>
     </a>
     <div class="ix-spacer"></div>
+    <button class="theme-btn-ix" id="themeToggle" type="button"></button>
     <a href="auditorias.php" class="ix-nav">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 7h18M3 12h18M3 17h18"/>
