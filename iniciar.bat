@@ -2,8 +2,9 @@
 chcp 65001 >nul
 title Validador CPMS
 
-:: Verificar si el puerto 8080 ya está en uso
-netstat -ano | find ":8080" >nul 2>&1
+:: Verificar si el puerto 8080 ya está en uso (solo cuenta si alguien lo tiene en LISTENING,
+:: no una conexion en TIME_WAIT que puede quedar unos segundos tras cerrar un servidor anterior)
+netstat -ano | find ":8080" | find "LISTENING" >nul 2>&1
 if %ERRORLEVEL% == 0 (
     echo Puerto 8080 ya en uso. Abriendo el navegador...
     start http://localhost:8080
