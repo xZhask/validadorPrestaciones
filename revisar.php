@@ -458,8 +458,9 @@ function familiaDeRegla(regla) {
 
 function formatAccion(accion, fam) {
     if (fam === 'dup') {
-        const m = (accion || '').match(/cantidad\s*=\s*(\d+)/);
-        if (m) return `AGREGAR <span class="qty">×${h(m[1])}</span>`;
+        // El resto captura el " - IGUALAR 85027" que el motor fusiona en la acción
+        const m = (accion || '').match(/cantidad\s*=\s*(\d+)(.*)$/);
+        if (m) return `AGREGAR <span class="qty">×${h(m[1])}</span>${h(m[2])}`;
     }
     return h(accion || '');
 }

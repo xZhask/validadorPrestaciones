@@ -164,6 +164,11 @@ http://localhost/validadorPrestaciones/
 Cuando una fila activa más de una regla, el color y la acción corresponden a la de mayor prioridad.
 Todos los motivos se concatenan con ` || `.
 
+Si otra regla ya marca una fila como `ELIMINAR`, se descarta su observación de duplicado:
+consolidar cantidades en una fila que se va a borrar sería una instrucción contradictoria.
+Por eso un código de hemograma que no corresponde a la IPRESS y además viene repetido
+aparece solo en el grupo Hemograma, no en Duplicados.
+
 ## Estructura del proyecto
 
 ```

@@ -19,7 +19,9 @@ use Validador\Observacion;
  */
 class ReglaCodigosDuplicados implements ReglaInterface
 {
-    public function codigo(): string { return 'DUPLICADO'; }
+    public const CODIGO = 'DUPLICADO';
+
+    public function codigo(): string { return self::CODIGO; }
     public function nombre(): string { return 'Códigos duplicados'; }
     public function color(): string  { return 'E8CCFF'; }
     public function prioridad(): int { return 4; }

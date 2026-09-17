@@ -246,22 +246,28 @@ class ReglaHemograma implements ReglaInterface
                 . implode(', ', $detalle)
                 . '); deben registrarse en la misma cantidad';
 
+        // Solo en la primera fila de cada código: es la que sobrevive a la
+        // consolidación de duplicados y donde el auditor ajusta la cantidad.
         $obs = [];
         foreach ($codigosValidos as $cod) {
-            foreach ($presentes[$cod] as $f) {
-                $obs[] = new Observacion(
-                    fila:        $f['fila'],
-                    pk:          $pk,
-                    codigo:      (string) $f['codigo'],
-                    valor:       $f['valor'],
-                    reglaCodigo: $this->codigo(),
-                    reglaNombre: $this->nombre(),
-                    prioridad:   $this->prioridadElim,
-                    color:       $this->colorElim,
-                    motivo:      $motivo,
-                    accion:      'REVISAR',
-                );
-            }
+            $f      = $presentes[$cod][0];
+            $otros  = array_values(array_filter(
+                $codigosValidos,
+                static fn($c): bool => $c !== $cod
+            ));
+
+            $obs[] = new Observacion(
+                fila:        $f['fila'],
+                pk:          $pk,
+                codigo:      (string) $f['codigo'],
+                valor:       $f['valor'],
+                reglaCodigo: $this->codigo(),
+                reglaNombre: $this->nombre(),
+                prioridad:   $this->prioridadElim,
+                color:       $this->colorElim,
+                motivo:      $motivo,
+                accion:      'IGUALAR ' . implode(' + ', $otros),
+            );
         }
 
         return $obs;
