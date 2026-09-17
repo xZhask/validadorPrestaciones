@@ -54,6 +54,7 @@ function ipressCorta(string $nombre): string
     --dup-st:#6d5cc4;  --dup-bg:#efedfb;  --dup-tx:#3c3489;
     --hemo-st:#c98a1a; --hemo-bg:#faeeda; --hemo-tx:#633806;
     --uro-st:#1d9e75;  --uro-bg:#e1f5ee;  --uro-tx:#085041;
+    --coag-st:#c2478f; --coag-bg:#fbeaf3; --coag-tx:#7a1f55;
     --sug-st:#2f7ed8;  --sug-bg:#e6f1fb;  --sug-tx:#0c447c;
     --man-st:#6b7280;  --man-bg:#eef0f2;  --man-tx:#3f4651;
     --badge-dias-bg: #e0f2f1; --badge-dias-br: #4db6ac; --badge-dias-tx: #00695c;
@@ -71,6 +72,7 @@ function ipressCorta(string $nombre): string
     --dup-st:#a78bfa;  --dup-bg:#2e1065;  --dup-tx:#a78bfa;
     --hemo-st:#fcd34d; --hemo-bg:#422006; --hemo-tx:#fde68a;
     --uro-st:#6ee7b7;  --uro-bg:#064e3b;  --uro-tx:#a7f3d0;
+    --coag-st:#f0abfc; --coag-bg:#4a044e; --coag-tx:#f5d0fe;
     --sug-st:#93c5fd;  --sug-bg:#1e3a8a;  --sug-tx:#bfdbfe;
     --man-st:#94a3b8;  --man-bg:#1e293b;  --man-tx:#cbd5e1;
     --badge-dias-bg: #064e3b; --badge-dias-br: #065f46; --badge-dias-tx: #6ee7b7;
@@ -125,6 +127,10 @@ body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);
 .aud-revisar{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;border-radius:var(--radius);padding:7px 12px;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);text-decoration:none;white-space:nowrap;transition:background .1s,color .1s,border-color .1s}
 .aud-revisar:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .aud-revisar svg{width:14px;height:14px;stroke-width:2;fill:none;stroke:currentColor}
+.aud-borrar{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius);padding:7px 9px;border:1px solid var(--line-strong);background:var(--surface);color:var(--faint);cursor:pointer;transition:background .1s,color .1s,border-color .1s}
+.aud-borrar:hover:not(:disabled){background:var(--tipo-st);color:#fff;border-color:var(--tipo-st)}
+.aud-borrar:disabled{opacity:.45;cursor:default}
+.aud-borrar svg{width:14px;height:14px;stroke-width:2;fill:none;stroke:currentColor}
 
 /* ── Estado vacío ─────────────────────────────────────────────────────────── */
 .empty-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:48px 20px;text-align:center;color:var(--muted)}
@@ -192,7 +198,7 @@ body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);
         $completa = $s['validadas'] >= $s['total'] && $s['total'] > 0;
         $progreso = min(100, (float) $s['progreso']);
     ?>
-    <div class="aud-card">
+    <div class="aud-card" data-id="<?= htmlspecialchars($s['id']) ?>">
         <div class="aud-head">
             <div class="aud-ico<?= $completa ? ' completa' : '' ?>">
                 <?php if ($completa): ?>
@@ -228,6 +234,12 @@ body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);
                 <span class="aud-bar-fill" style="width:<?= $progreso ?>%"></span>
             </div>
             <span class="aud-progress-text"><?= number_format($s['validadas']) ?> / <?= number_format($s['total']) ?> (<?= number_format($s['progreso'], 1) ?>%)</span>
+            <button type="button" class="aud-borrar"
+                    data-archivo="<?= htmlspecialchars($s['archivo']) ?>"
+                    data-validadas="<?= (int) $s['validadas'] ?>"
+                    title="Eliminar esta auditoría">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>
             <a href="revisar.php?id=<?= htmlspecialchars($s['id']) ?>" class="aud-revisar">
                 Revisar
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -239,5 +251,40 @@ body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);
     <?php endif; ?>
 
 </main>
+
+<script>
+'use strict';
+
+document.querySelectorAll('.aud-borrar').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+        const card     = btn.closest('.aud-card');
+        const id       = card.dataset.id;
+        const archivo  = btn.dataset.archivo;
+        const validadas = Number(btn.dataset.validadas);
+
+        let msg = 'Se eliminará la auditoría "' + archivo + '" junto con su Excel original.\n\n'
+                + 'Esta acción no se puede deshacer.';
+        if (validadas > 0) {
+            msg += '\n\nAtención: tiene ' + validadas + ' prestación(es) ya validada(s). Ese avance se pierde.';
+        }
+        if (!confirm(msg)) return;
+
+        btn.disabled = true;
+        try {
+            const r = await fetch('api.php?ruta=sesion', {
+                method:  'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ id: id }),
+            });
+            const d = await r.json();
+            if (!d.ok) throw new Error(d.error || 'Error desconocido');
+            location.reload();
+        } catch (e) {
+            btn.disabled = false;
+            alert('No se pudo eliminar la auditoría: ' + e.message);
+        }
+    });
+});
+</script>
 </body>
 </html>

@@ -64,6 +64,7 @@ try {
         'GET:sesiones'        => rutaGetSesiones($gestor),
         'POST:sesiones'       => rutaPostSesiones($gestor, $cfg),
         'GET:sesion'          => rutaGetSesion($gestor),
+        'DELETE:sesion'       => rutaDeleteSesion($gestor),
         'GET:prestacion'      => rutaGetPrestacion($gestor),
         'POST:observacion'    => rutaPostObservacion($gestor),
         'PUT:observacion'     => rutaPutObservacion($gestor),
@@ -141,6 +142,15 @@ function rutaPostSesiones(GestorSesiones $gestor, array $cfg): never
         'total_observaciones' => $resultado->totalObservaciones(),
         'total_filas_obs'     => count($resultado->resolucionPorFila()),
     ]);
+}
+
+// ── DELETE sesion ─────────────────────────────────────────────────────────────
+
+function rutaDeleteSesion(GestorSesiones $gestor): never
+{
+    $id = req(bodyJson(), 'id');
+    $gestor->eliminar($id);
+    jsonOk(['eliminada' => $id]);
 }
 
 // ── GET sesion?id= ────────────────────────────────────────────────────────────
@@ -435,11 +445,12 @@ function familiaDeReglaPhp(string $regla): string
 {
     if (str_starts_with($regla, 'PROHIBIDO')) return 'tipo';
     return match ($regla) {
-        'DUPLICADO'  => 'dup',
-        'HEMOGRAMA'  => 'hemo',
-        'UROCULTIVO' => 'uro',
-        'SUGERENCIA' => 'sug',
-        default      => 'manual',
+        'DUPLICADO'   => 'dup',
+        'HEMOGRAMA'   => 'hemo',
+        'UROCULTIVO'  => 'uro',
+        'COAGULACION' => 'coag',
+        'SUGERENCIA'  => 'sug',
+        default       => 'manual',
     };
 }
 

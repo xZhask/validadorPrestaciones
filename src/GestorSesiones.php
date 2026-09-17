@@ -128,6 +128,30 @@ class GestorSesiones
     }
 
     /**
+     * Elimina por completo la carpeta de una sesión (original.xlsx incluido).
+     * La operación es irreversible: storage/ no está bajo control de versiones.
+     */
+    public function eliminar(string $id): void
+    {
+        $this->validarId($id);
+        $carpeta = $this->carpeta($id);
+
+        if (!is_dir($carpeta)) {
+            throw new \RuntimeException("La sesión {$id} no existe.");
+        }
+
+        foreach (glob($carpeta . DIRECTORY_SEPARATOR . '*') ?: [] as $archivo) {
+            if (is_file($archivo) && !@unlink($archivo)) {
+                throw new \RuntimeException("No se pudo eliminar {$archivo}. ¿Está abierto en otro programa?");
+            }
+        }
+
+        if (!@rmdir($carpeta)) {
+            throw new \RuntimeException("No se pudo eliminar la carpeta de la sesión {$id}.");
+        }
+    }
+
+    /**
      * Carga y retorna el estado.json de la sesión como array.
      */
     public function cargar(string $id): array

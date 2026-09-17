@@ -47,6 +47,7 @@ $idJson     = json_encode($id, JSON_UNESCAPED_UNICODE);
     --dup-st:#6d5cc4;  --dup-bg:#efedfb;  --dup-tx:#3c3489;
     --hemo-st:#c98a1a; --hemo-bg:#faeeda; --hemo-tx:#633806;
     --uro-st:#1d9e75;  --uro-bg:#e1f5ee;  --uro-tx:#085041;
+    --coag-st:#c2478f; --coag-bg:#fbeaf3; --coag-tx:#7a1f55;
     --sug-st:#2f7ed8;  --sug-bg:#e6f1fb;  --sug-tx:#0c447c;
     --man-st:#6b7280;  --man-bg:#eef0f2;  --man-tx:#3f4651;
     --badge-dias-bg: #e0f2f1; --badge-dias-br: #4db6ac; --badge-dias-tx: #00695c;
@@ -64,6 +65,7 @@ $idJson     = json_encode($id, JSON_UNESCAPED_UNICODE);
     --dup-st:#a78bfa;  --dup-bg:#2e1065;  --dup-tx:#a78bfa;
     --hemo-st:#fcd34d; --hemo-bg:#422006; --hemo-tx:#fde68a;
     --uro-st:#6ee7b7;  --uro-bg:#064e3b;  --uro-tx:#a7f3d0;
+    --coag-st:#f0abfc; --coag-bg:#4a044e; --coag-tx:#f5d0fe;
     --sug-st:#93c5fd;  --sug-bg:#1e3a8a;  --sug-tx:#bfdbfe;
     --man-st:#94a3b8;  --man-bg:#1e293b;  --man-tx:#cbd5e1;
     --badge-dias-bg: #064e3b; --badge-dias-br: #065f46; --badge-dias-tx: #6ee7b7;
@@ -360,10 +362,11 @@ const FAM_META = {
     dup:    { nombre:'Duplicados',   st:'var(--dup-st)',  bg:'var(--dup-bg)',  tx:'var(--dup-tx)'  },
     hemo:   { nombre:'Hemograma',    st:'var(--hemo-st)', bg:'var(--hemo-bg)', tx:'var(--hemo-tx)' },
     uro:    { nombre:'Urocultivo',   st:'var(--uro-st)',  bg:'var(--uro-bg)',  tx:'var(--uro-tx)'  },
+    coag:   { nombre:'Coagulación',  st:'var(--coag-st)', bg:'var(--coag-bg)', tx:'var(--coag-tx)' },
     sug:    { nombre:'Sugerencia',   st:'var(--sug-st)',  bg:'var(--sug-bg)',  tx:'var(--sug-tx)'  },
     manual: { nombre:'Manual',       st:'var(--man-st)',  bg:'var(--man-bg)',  tx:'var(--man-tx)'  },
 };
-const FAM_ORDER  = ['tipo', 'dup', 'hemo', 'uro', 'sug', 'manual'];
+const FAM_ORDER  = ['tipo', 'dup', 'hemo', 'uro', 'coag', 'sug', 'manual'];
 const colapsados = { dup: true };
 
 // ── API ────────────────────────────────────────────────────────────────────
@@ -448,6 +451,7 @@ function familiaDeRegla(regla) {
     if (regla === 'DUPLICADO')  return 'dup';
     if (regla === 'HEMOGRAMA')  return 'hemo';
     if (regla === 'UROCULTIVO') return 'uro';
+    if (regla === 'COAGULACION') return 'coag';
     if (regla === 'SUGERENCIA') return 'sug';
     return 'manual';
 }

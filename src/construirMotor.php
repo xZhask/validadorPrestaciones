@@ -38,7 +38,8 @@ function construirMotor(array $cfg): MotorValidacion
         colorSug:       $cfg['colores']['SUGERENCIA']['hex'],
         prioridadSug:   $cfg['colores']['SUGERENCIA']['prioridad'],
         codigos:        $cfg['grupos']['hemograma']['codigos'],
-        ipressMapeo:    $cfg['grupos']['hemograma']['ipress'],
+        ipressPorCodigo: $cfg['grupos']['hemograma']['ipress_codigos'],
+        ipressPorNombre: $cfg['grupos']['hemograma']['ipress_nombres'],
     ));
 
     $m->registrar(new ReglaRedundanciaGrupo(
@@ -47,6 +48,15 @@ function construirMotor(array $cfg): MotorValidacion
         colorHex:     $cfg['grupos']['urocultivo']['color'],
         prioridadVal: $cfg['colores']['ELIMINAR_UROCULTIVO']['prioridad'],
         codigos:      $cfg['grupos']['urocultivo']['codigos'],
+    ));
+
+    $m->registrar(new ReglaRedundanciaGrupo(
+        codigoRegla:      'COAGULACION',
+        nombreRegla:      'Redundancia Tiempo de coagulación',
+        colorHex:         $cfg['grupos']['coagulacion']['color'],
+        prioridadVal:     $cfg['colores']['ELIMINAR_COAGULACION']['prioridad'],
+        codigos:          $cfg['grupos']['coagulacion']['codigos'],
+        codigoPreferente: $cfg['grupos']['coagulacion']['preferente'],
     ));
 
     return $m;

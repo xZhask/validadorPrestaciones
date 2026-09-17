@@ -11,16 +11,20 @@ use Validador\Texto;
  * Regla de hemograma IPRESS-aware (v2).
  *
  * Familia de códigos hemograma (configurable):
- *   85025, 85027, 85007, 85013, 85014, 85018, 85032, 85049, 85590
+ *   85004, 85025, 85027, 85007, 85013, 85014, 85018, 85032, 85049, 85590
  *
- * Representación válida por IPRESS (configurable vía config.php):
- *   Arequipa / Chiclayo → par {85027, 85007}
- *   ABL / Geriátrico    → {85025}
+ * Representación válida por IPRESS (configurable vía config.php).  La IPRESS se
+ * reconoce por su código RENIPRESS y, si el archivo no lo trae, por patrón
+ * contenido en el nombre:
+ *   Arequipa (11794) / Chiclayo (11833) → par {85027, 85007}, cantidades iguales
+ *   A. B. Leguía (16094) / Geriátrico San José (14718) → {85025}
  *
  * Lógica por prestación:
  *   1. Si algún código del conjunto válido V está presente → conservarlo
  *      (y su par si V es un par y ambos están presentes).
  *      Eliminar todo otro código de la familia.
+ *      Si V exige un código que no llegó → SUGERENCIA de agregarlo.
+ *      Si los códigos de V llegaron en cantidades distintas → REVISAR.
  *   2. Si ninguno de V está presente pero hay CBC (85025 ó 85027):
  *      Conservar el CBC presente, emitir SUGERENCIA hacia el set V.
  *      Eliminar todo otro código de la familia.
@@ -37,8 +41,11 @@ class ReglaHemograma implements ReglaInterface
     /** Lookup O(1) de todos los códigos de la familia */
     private array $familia;
 
-    /** [clave_texto_normalizado => list<string>] */
-    private array $ipressMapeo;
+    /** [codigo_renipress_sin_ceros => list<string>] */
+    private array $ipressPorCodigo;
+
+    /** [patron_nombre_normalizado => list<string>] */
+    private array $ipressPorNombre;
 
     /** Códigos CBC de respaldo cuando ningún código de V está presente */
     private const CBC_FALLBACK = ['85025', '85027'];
@@ -49,10 +56,17 @@ class ReglaHemograma implements ReglaInterface
         private readonly string $colorSug,
         private readonly int    $prioridadSug,
         array                   $codigos,
-        array                   $ipressMapeo,
+        array                   $ipressPorCodigo,
+        array                   $ipressPorNombre,
     ) {
-        $this->familia     = array_fill_keys($codigos, true);
-        $this->ipressMapeo = $ipressMapeo;
+        $this->familia         = array_fill_keys($codigos, true);
+        $this->ipressPorNombre = $ipressPorNombre;
+
+        // Excel pierde los ceros a la izquierda al guardar el código como número
+        $this->ipressPorCodigo = [];
+        foreach ($ipressPorCodigo as $cod => $set) {
+            $this->ipressPorCodigo[ltrim((string) $cod, '0')] = $set;
+        }
     }
 
     public function codigo(): string { return 'HEMOGRAMA'; }
@@ -65,10 +79,14 @@ class ReglaHemograma implements ReglaInterface
         // 1. Recolectar filas de la familia y nombre de IPRESS
         $presentes = []; // codigo => list<fila_array>
         $ipressNom = '';
+        $ipressCod = '';
 
         foreach ($atencion as $f) {
             if ($ipressNom === '' && $f['ipress_nom'] !== '') {
                 $ipressNom = $f['ipress_nom'];
+            }
+            if ($ipressCod === '' && $f['ipress_cod'] !== '') {
+                $ipressCod = $f['ipress_cod'];
             }
             if (isset($this->familia[$f['codigo']])) {
                 $presentes[$f['codigo']][] = $f;
@@ -80,8 +98,7 @@ class ReglaHemograma implements ReglaInterface
         }
 
         // 2. Determinar el conjunto válido para esta IPRESS
-        $claveIpress = Texto::clave($ipressNom);
-        $setValido   = $this->ipressMapeo[$claveIpress] ?? null;
+        $setValido = $this->setValidoPara($ipressCod, $ipressNom);
 
         // 3. Aplicar lógica
         if ($setValido === null) {
@@ -89,13 +106,28 @@ class ReglaHemograma implements ReglaInterface
             return $this->eliminarMenosMaxValor($pk, $presentes);
         }
 
-        $setLookup       = array_fill_keys($setValido, true);
-        $codigosValidos  = array_filter(array_keys($presentes), fn(string $c) => isset($setLookup[$c]));
+        $setLookup      = array_fill_keys($setValido, true);
+        $codigosValidos = array_values(array_filter(
+            array_keys($presentes),
+            static fn($c): bool => isset($setLookup[$c])
+        ));
 
         if (!empty($codigosValidos)) {
             // Caso A: hay al menos un código del set válido presente → conservar todos los del set
             $conservar = array_fill_keys($codigosValidos, true);
-            return $this->eliminarResto($pk, $presentes, $conservar, $codigosValidos);
+            $obs       = $this->eliminarResto($pk, $presentes, $conservar, $codigosValidos);
+
+            // El set puede exigir varios códigos juntos (Arequipa/Chiclayo: 85027 + 85007)
+            $faltantes = array_values(array_filter(
+                $setValido,
+                static fn(string $c): bool => !isset($presentes[$c])
+            ));
+
+            if (!empty($faltantes)) {
+                return array_merge($obs, $this->sugerirFaltantes($pk, $presentes, $codigosValidos, $faltantes));
+            }
+
+            return array_merge($obs, $this->avisarCantidades($pk, $presentes, $codigosValidos));
         }
 
         // Caso B: ningún código del set válido; buscar CBC de respaldo
@@ -118,6 +150,122 @@ class ReglaHemograma implements ReglaInterface
     }
 
     // ── Helpers privados ─────────────────────────────────────────────────
+
+    /**
+     * Resuelve el conjunto válido en cascada: primero por CÓDIGO IPRESS, que es
+     * exacto; si el archivo no lo trae, por patrón contenido en el nombre
+     * normalizado ("hospital regional pnp arequipa" contiene "arequipa").
+     * Devuelve null si ninguna IPRESS mapeada coincide.
+     */
+    private function setValidoPara(string $ipressCod, string $ipressNom): ?array
+    {
+        $cod = ltrim(trim($ipressCod), '0');
+        if ($cod !== '' && isset($this->ipressPorCodigo[$cod])) {
+            return $this->ipressPorCodigo[$cod];
+        }
+
+        $clave = Texto::clave($ipressNom);
+        if ($clave === '') {
+            return null;
+        }
+
+        foreach ($this->ipressPorNombre as $patron => $set) {
+            if (str_contains($clave, (string) $patron)) {
+                return $set;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * El set válido exige varios códigos juntos pero solo llegó parte de ellos.
+     * Se avisa una sola vez, sobre la primera fila del código sí presente.
+     *
+     * @param string[] $faltantes Códigos del set que no aparecen en la atención
+     */
+    private function sugerirFaltantes(
+        string $pk,
+        array  $presentes,
+        array  $codigosValidos,
+        array  $faltantes,
+    ): array {
+        $presente = (string) $codigosValidos[0];
+        $f        = $presentes[$presente][0];
+        $cantidad = (int) ($f['cantidad'] ?? 0);
+
+        $mismaCantidad = $cantidad > 0
+            ? "en la misma cantidad que {$presente} ({$cantidad})"
+            : "en la misma cantidad que {$presente}";
+
+        return [new Observacion(
+            fila:        $f['fila'],
+            pk:          $pk,
+            codigo:      $presente,
+            valor:       $f['valor'],
+            reglaCodigo: 'SUGERENCIA',
+            reglaNombre: 'Sugerencia hemograma',
+            prioridad:   $this->prioridadSug,
+            color:       $this->colorSug,
+            motivo:      "El registro válido de hemograma en esta IPRESS exige también "
+                       . implode(' + ', $faltantes) . "; considerar agregarlo {$mismaCantidad}",
+            accion:      'SUGERENCIA',
+        )];
+    }
+
+    /**
+     * Los códigos del set válido deben facturarse en cantidades iguales.
+     * Si no coinciden se marcan todas sus filas para que el auditor decida;
+     * la regla no elige cuál cantidad es la correcta.
+     */
+    private function avisarCantidades(string $pk, array $presentes, array $codigosValidos): array
+    {
+        if (count($codigosValidos) < 2) {
+            return [];
+        }
+
+        $cantidades = [];
+        foreach ($codigosValidos as $cod) {
+            $total = 0;
+            foreach ($presentes[$cod] as $f) {
+                $total += (int) ($f['cantidad'] ?? 0);
+            }
+            $cantidades[(string) $cod] = $total;
+        }
+
+        // Sin columna cantidad todos quedan en 0 y no hay nada que comparar
+        if (count(array_unique($cantidades)) < 2) {
+            return [];
+        }
+
+        $detalle = [];
+        foreach ($cantidades as $cod => $n) {
+            $detalle[] = "{$cod} = {$n}";
+        }
+        $motivo = 'Cantidades distintas entre los códigos del hemograma ('
+                . implode(', ', $detalle)
+                . '); deben registrarse en la misma cantidad';
+
+        $obs = [];
+        foreach ($codigosValidos as $cod) {
+            foreach ($presentes[$cod] as $f) {
+                $obs[] = new Observacion(
+                    fila:        $f['fila'],
+                    pk:          $pk,
+                    codigo:      (string) $f['codigo'],
+                    valor:       $f['valor'],
+                    reglaCodigo: $this->codigo(),
+                    reglaNombre: $this->nombre(),
+                    prioridad:   $this->prioridadElim,
+                    color:       $this->colorElim,
+                    motivo:      $motivo,
+                    accion:      'REVISAR',
+                );
+            }
+        }
+
+        return $obs;
+    }
 
     /**
      * Emite ELIMINAR para todos los códigos de $presentes que no estén en $conservarLookup.

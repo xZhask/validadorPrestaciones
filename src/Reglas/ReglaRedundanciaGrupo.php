@@ -9,10 +9,11 @@ use Validador\Observacion;
 /**
  * Regla genérica parametrizable para grupos de códigos redundantes.
  *
- * Si una atención contiene 2 o más códigos DISTINTOS del grupo, conserva
- * el de mayor valor económico y marca los demás con ELIMINAR.
+ * Si una atención contiene 2 o más códigos DISTINTOS del grupo, conserva uno
+ * y marca los demás con ELIMINAR.  El código conservado es el preferente,
+ * si se configuró y está presente; si no, el de mayor valor económico.
  *
- * Se instancia para Urocultivo — prioridad 2 / color turquesa.
+ * Se instancia para Urocultivo (mayor valor) y Coagulación (preferente 85345).
  * (Hemograma usa su propia ReglaHemograma IPRESS-aware.)
  */
 class ReglaRedundanciaGrupo implements ReglaInterface
@@ -26,13 +27,16 @@ class ReglaRedundanciaGrupo implements ReglaInterface
      * @param string   $colorHex      Hex RGB sin # (p.ej. 'B7E1E4')
      * @param int      $prioridadVal  Mayor = más prioritario en conflicto
      * @param string[] $codigos       Códigos CPMS normalizados que forman el grupo
+     * @param ?string  $codigoPreferente Código que se conserva siempre que esté
+     *                                presente; null → conservar el de mayor valor
      */
     public function __construct(
-        private readonly string $codigoRegla,
-        private readonly string $nombreRegla,
-        private readonly string $colorHex,
-        private readonly int    $prioridadVal,
-        array                   $codigos,
+        private readonly string  $codigoRegla,
+        private readonly string  $nombreRegla,
+        private readonly string  $colorHex,
+        private readonly int     $prioridadVal,
+        array                    $codigos,
+        private readonly ?string $codigoPreferente = null,
     ) {
         $this->lookup = array_fill_keys($codigos, true);
     }
@@ -58,23 +62,28 @@ class ReglaRedundanciaGrupo implements ReglaInterface
             return [];
         }
 
-        // Para cada código distinto, tomar el mayor valor que aparece en sus filas
-        $maxPorCodigo = [];
-        foreach ($porCodigo as $cod => $filas) {
-            $maxPorCodigo[$cod] = max(array_map(
-                static fn(array $f): float => (float) ($f['valor'] ?? 0.0),
-                $filas
-            ));
+        // El código a conservar: el preferente si está presente; si no, el de mayor valor
+        if ($this->codigoPreferente !== null && isset($porCodigo[$this->codigoPreferente])) {
+            $conservar = $this->codigoPreferente;
+            $criterio  = 'código de referencia';
+        } else {
+            $maxPorCodigo = [];
+            foreach ($porCodigo as $cod => $filas) {
+                $maxPorCodigo[$cod] = max(array_map(
+                    static fn(array $f): float => (float) ($f['valor'] ?? 0.0),
+                    $filas
+                ));
+            }
+            arsort($maxPorCodigo);
+            $conservar = (string) array_key_first($maxPorCodigo);
+            $criterio  = 'mayor valor';
         }
 
-        // El código a conservar: mayor valor máximo
-        arsort($maxPorCodigo);
-        $conservar = (string) array_key_first($maxPorCodigo);
-
-        // Marcar TODAS las filas de los códigos que NO se conservan
+        // Marcar TODAS las filas de los códigos que NO se conservan.
+        // PHP convierte las claves numéricas del array a int; comparar en string.
         $obs = [];
         foreach ($porCodigo as $cod => $filas) {
-            if ($cod === $conservar) {
+            if ((string) $cod === $conservar) {
                 continue;
             }
             foreach ($filas as $f) {
@@ -87,7 +96,7 @@ class ReglaRedundanciaGrupo implements ReglaInterface
                     reglaNombre: $this->nombre(),
                     prioridad:   $this->prioridad(),
                     color:       $this->color(),
-                    motivo:      "Redundancia de {$this->nombreRegla}; conservar el código {$conservar} (mayor valor)",
+                    motivo:      "{$this->nombreRegla}; conservar el código {$conservar} ({$criterio})",
                     accion:      'ELIMINAR',
                 );
             }

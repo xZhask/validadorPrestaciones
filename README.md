@@ -155,10 +155,11 @@ http://localhost/validadorPrestaciones/
 
 | Regla | Color | Prioridad | Descripción |
 |-------|-------|-----------|-------------|
-| Código 93784 prohibido | 🔴 Rojo `#FFCCCC` | 4 (mayor) | El código 93784 no está permitido en atenciones de tipo 2 o 3 |
-| Códigos duplicados | 🟣 Violeta `#E8CCFF` | 3 | Un mismo código CPMS aparece más de una vez en la misma atención |
-| Redundancia Hemograma | 🟡 Ámbar `#FFE599` | 2 | Dos o más códigos distintos de hemograma en la misma atención; se conserva el de mayor valor |
-| Redundancia Urocultivo | 🩵 Turquesa `#B7E1E4` | 1 | Dos o más códigos distintos de urocultivo en la misma atención; se conserva el de mayor valor |
+| Códigos prohibidos | 🔴 Rojo `#FFCCCC` | 5 (mayor) | 93784, 99246, 99246.01 y 99246.02 no se permiten en atenciones de tipo 2 o 3; 15000 no se permite en ningún tipo |
+| Códigos duplicados | 🟣 Violeta `#E8CCFF` | 4 | Un mismo código CPMS aparece más de una vez en la misma atención; se consolida la cantidad en la primera fila |
+| Redundancia Hemograma | 🟡 Ámbar `#FFE599` | 3 | El registro válido depende de la IPRESS: Arequipa y Chiclayo exigen el par 85027 + 85007 en cantidades iguales; A. B. Leguía y Geriátrico usan 85025. El resto de la familia (85004 incluido) se elimina por redundancia; si las cantidades del par no coinciden se marca `REVISAR`, y si falta uno de los dos se emite una sugerencia |
+| Redundancia Urocultivo | 🩵 Turquesa `#B7E1E4` | 2 | Dos o más códigos distintos de urocultivo en la misma atención; se conserva el de mayor valor |
+| Redundancia Coagulación | 🩷 Rosa `#F4CCE4` | 2 | Dos o más códigos distintos de tiempo de coagulación (85345, 85347, 85348); se conserva siempre el 85345 si está presente |
 
 Cuando una fila activa más de una regla, el color y la acción corresponden a la de mayor prioridad.
 Todos los motivos se concatenan con ` || `.
