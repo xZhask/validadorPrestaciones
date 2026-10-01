@@ -148,6 +148,11 @@ http://localhost/validadorPrestaciones/
 5. Revisa las métricas, el resumen por regla y la tabla de detalle filtrable.
 6. Descarga el archivo validado con el botón **Descargar**.
 
+En la revisión de cada prestación, el botón **Solicitar CIE-10** junto a los diagnósticos
+registra una solicitud para agregar un diagnóstico o modificar uno registrado (DX1/DX2),
+con su motivo. Las solicitudes se exportan en la columna **SOLICITUD DIAGNÓSTICO**, al
+final del Excel, sobre la primera fila de la prestación. Re-validar no las modifica.
+
 > El archivo descargado es de un solo uso: el enlace expira tras la primera descarga
 > o después de 1 hora.
 

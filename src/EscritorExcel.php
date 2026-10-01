@@ -14,6 +14,9 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class EscritorExcel
 {
+    /** Azul claro, distinto de los colores de las reglas */
+    private const COLOR_DX = 'DDEBF7';
+
     private array $cfg;
 
     public function __construct()
@@ -123,13 +126,26 @@ class EscritorExcel
         $colIndex  = Coordinate::columnIndexFromString($sheet->getHighestColumn());
         $letAccion = Coordinate::stringFromColumnIndex($colIndex + 1);
         $letMotivo = Coordinate::stringFromColumnIndex($colIndex + 2);
+        $letDx     = Coordinate::stringFromColumnIndex($colIndex + 3);
 
         $sheet->getCell($letAccion . '1')->setValue('ACCIÓN SUGERIDA');
         $sheet->getCell($letMotivo . '1')->setValue('MOTIVO DE OBSERVACIÓN');
+        $sheet->getCell($letDx . '1')->setValue('SOLICITUD DIAGNÓSTICO');
         $this->estiloEncabezado($sheet, $letAccion . '1');
         $this->estiloEncabezado($sheet, $letMotivo . '1');
+        $this->estiloEncabezado($sheet, $letDx . '1');
         $sheet->getColumnDimension($letAccion)->setWidth(28);
         $sheet->getColumnDimension($letMotivo)->setWidth(60);
+        $sheet->getColumnDimension($letDx)->setWidth(50);
+
+        // Va siempre, aunque quede vacía, para que el formato no cambie entre meses
+        foreach ($this->solicitudesDxPorFila($estado) as $fila => $texto) {
+            $sheet->getCell($letDx . $fila)->setValue($texto);
+            $sheet->getStyle("{$letDx}{$fila}")->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::COLOR_DX]],
+                'alignment' => ['wrapText' => true],
+            ]);
+        }
 
         foreach ($this->resolverObservacionesEstado($estado) as $fila => $res) {
             $sheet->getCell($letAccion . $fila)->setValue($res['accion']);
@@ -206,6 +222,28 @@ class EscritorExcel
         }
         ksort($result);
         return $result;
+    }
+
+    /**
+     * Texto de la columna SOLICITUD DIAGNÓSTICO, en la primera fila de cada
+     * prestación.  Varias solicitudes de una misma prestación se unen con " || ",
+     * igual que los motivos.
+     *
+     * @return array<int, string>
+     */
+    private function solicitudesDxPorFila(array $estado): array
+    {
+        $porFila = [];
+        foreach ($estado['prestaciones'] as $prestacion) {
+            foreach ($prestacion['solicitudes_dx'] ?? [] as $s) {
+                $nuevo = $s['nuevo'] . ($s['desc'] !== '' ? " ({$s['desc']})" : '');
+                $porFila[(int) $s['fila']][] = ($s['tipo'] === 'CAMBIAR'
+                        ? "CAMBIAR DX{$s['slot']} {$s['actual']} POR {$nuevo}"
+                        : "AGREGAR DX {$nuevo}")
+                    . " — {$s['motivo']}";
+            }
+        }
+        return array_map(static fn(array $l): string => implode(' || ', $l), $porFila);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

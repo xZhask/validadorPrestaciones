@@ -138,6 +138,21 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .badge-dias{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--badge-dias-bg);border:1px solid var(--badge-dias-br);color:var(--badge-dias-tx);font-family:var(--mono);white-space:nowrap}
 .dx{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
 .dx .pill b{font-family:var(--mono);font-weight:500;margin-right:4px}
+.dx{align-items:center}
+
+/* Solicitudes de diagnóstico (CIE-10) */
+.btn-dx{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-family:inherit;padding:2px 9px;border-radius:99px;border:1px dashed var(--sug-st);background:none;color:var(--sug-tx);cursor:pointer;white-space:nowrap}
+.btn-dx:hover{background:var(--sug-bg)}
+.btn-dx svg{width:12px;height:12px;stroke:currentColor;stroke-width:2.2;fill:none}
+.sdx-list{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.sdx{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 10px;border-radius:7px;background:var(--sug-bg);color:var(--sug-tx);font-size:12.5px}
+.sdx-tag{flex-shrink:0;font-size:10.5px;font-weight:700;letter-spacing:.3px}
+.sdx-cod{font-family:var(--mono);font-weight:600}
+.sdx-cod{flex-shrink:0}
+.sdx-cod s{font-weight:400;opacity:.7}
+.sdx-desc{flex-shrink:0;max-width:40%;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sdx-mot{flex:1;min-width:0;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sdx .icobtn{color:var(--sug-tx)}
 
 /* Botón validar */
 .btn-validar{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;border-radius:var(--radius);padding:8px 14px;cursor:pointer;white-space:nowrap;font-family:inherit;transition:background .1s,color .1s;flex-shrink:0}
@@ -236,7 +251,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .sbtn svg{width:13px;height:13px;stroke-width:2;fill:none;stroke:currentColor}
 
 /* ── Dialog ───────────────────────────────────────────────────────────── */
-dialog{border:none;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.22);padding:0;width:440px;max-width:95vw;background:var(--surface);color:var(--ink)}
+dialog{margin:auto;border:none;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.22);padding:0;width:440px;max-width:95vw;background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.38)}
 .dlg-head{padding:.85rem 1.1rem;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
 .dlg-head h3{font-size:.92rem;margin:0}
@@ -364,6 +379,43 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
     <div class="dlg-foot">
         <button class="btn-cancel" onclick="document.getElementById('dlgObs').close()">Cancelar</button>
         <button class="btn-save" id="dlgGuardar">Guardar</button>
+    </div>
+</dialog>
+
+<!-- ── Dialog solicitud de diagnóstico ─────────────────────────────────── -->
+<dialog id="dlgDx">
+    <div class="dlg-head">
+        <h3 id="dxTitulo">Solicitar diagnóstico CIE-10</h3>
+        <button class="dlg-close" onclick="document.getElementById('dlgDx').close()">✕</button>
+    </div>
+    <div class="dlg-body">
+        <div>
+            <label class="field-lbl" for="dxTipo">Solicitud</label>
+            <select class="field-sel" id="dxTipo">
+                <option value="AGREGAR">Agregar un diagnóstico</option>
+                <option value="CAMBIAR">Modificar un diagnóstico registrado</option>
+            </select>
+        </div>
+        <div id="dxSlotWrap" style="display:none">
+            <label class="field-lbl" for="dxSlot">Diagnóstico a modificar</label>
+            <select class="field-sel" id="dxSlot"></select>
+        </div>
+        <div>
+            <label class="field-lbl" for="dxNuevo" id="dxNuevoLbl">Código CIE-10</label>
+            <input type="text" class="field-sel" id="dxNuevo" placeholder="p.ej. N39.0" autocomplete="off" style="font-family:var(--mono);text-transform:uppercase">
+        </div>
+        <div>
+            <label class="field-lbl" for="dxDesc">Descripción <span style="font-weight:400">(opcional)</span></label>
+            <input type="text" class="field-sel" id="dxDesc" placeholder="Descripción del diagnóstico" autocomplete="off">
+        </div>
+        <div>
+            <label class="field-lbl" for="dxMotivo">Motivo</label>
+            <textarea class="field-ta" id="dxMotivo" placeholder="Por qué se solicita…"></textarea>
+        </div>
+    </div>
+    <div class="dlg-foot">
+        <button class="btn-cancel" onclick="document.getElementById('dlgDx').close()">Cancelar</button>
+        <button class="btn-save" id="dxGuardar">Guardar</button>
     </div>
 </dialog>
 
@@ -656,6 +708,11 @@ function renderDetalle() {
         .filter(dg => dg.codigo)
         .map(dg => `<span class="pill"><b>${h(dg.codigo)}</b> ${h(dg.desc)}</span>`)
         .join('');
+    const btnDx = `<button class="btn-dx" onclick="abrirSolicitudDx()" title="Solicitar agregar un CIE-10 o modificar uno registrado">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Solicitar CIE-10</button>`;
+    const solicitudesHtml = (d.solicitudes_dx || []).length
+        ? `<div class="sdx-list">${d.solicitudes_dx.map(renderSolicitudDx).join('')}</div>`
+        : '';
 
     const chkSvg = `<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>`;
 
@@ -672,7 +729,8 @@ function renderDetalle() {
                     <span class="pill">${h(d.ipress_nom)}</span>
                     ${fechaRango ? `<span class="pill pill-fecha">${h(fechaRango)}</span>${diasBadge}` : ''}
                 </div>
-                ${dxHtml ? `<div class="dx">${dxHtml}</div>` : ''}
+                <div class="dx">${dxHtml}${btnDx}</div>
+                ${solicitudesHtml}
             </div>
             <button class="btn-validar ${d.validada ? 'validada' : 'pendiente'}" id="btnValidar" onclick="toggleValidar()">
                 ${chkSvg}${d.validada ? 'Prestación validada' : 'Marcar como validada'}
@@ -1074,6 +1132,111 @@ document.getElementById('dlgGuardar').addEventListener('click', async () => {
     }
 });
 
+// ── Solicitudes de diagnóstico (CIE-10) ────────────────────────────────────
+async function apiSend(method, ruta, body) {
+    const r = await fetch('api.php?ruta=' + encodeURIComponent(ruta), {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Error');
+    return d.data;
+}
+
+function renderSolicitudDx(s) {
+    const desc   = s.desc ? `<span class="sdx-desc">${h(s.desc)}</span>` : '';
+    const cuerpo = s.tipo === 'CAMBIAR'
+        ? `<span class="sdx-tag">CAMBIAR DX${s.slot}</span><span class="sdx-cod"><s>${h(s.actual)}</s> → ${h(s.nuevo)}</span>${desc}`
+        : `<span class="sdx-tag">AGREGAR DX</span><span class="sdx-cod">${h(s.nuevo)}</span>${desc}`;
+    return `<div class="sdx">
+        ${cuerpo}
+        <span class="sdx-mot" title="${h(s.motivo)}">${h(s.motivo)}</span>
+        <button class="icobtn" title="Editar solicitud" onclick="abrirSolicitudDx(${s.idx})">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="icobtn danger" title="Quitar solicitud" onclick="borrarSolicitudDx(${s.idx})">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
+        </button>
+    </div>`;
+}
+
+let dxIdx = null; // null = nueva solicitud
+
+function actualizarDlgDx() {
+    const cambiar = document.getElementById('dxTipo').value === 'CAMBIAR';
+    document.getElementById('dxSlotWrap').style.display = cambiar ? '' : 'none';
+    document.getElementById('dxNuevoLbl').textContent  = cambiar ? 'Nuevo código CIE-10' : 'Código CIE-10';
+}
+
+function abrirSolicitudDx(idx = null) {
+    const s = idx === null ? null : detalleData.solicitudes_dx.find(x => x.idx === idx);
+    dxIdx = s ? idx : null;
+
+    // Solo se puede modificar un diagnóstico que esté registrado
+    const registrados = detalleData.diagnosticos.filter(dg => dg.codigo);
+    const selSlot = document.getElementById('dxSlot');
+    selSlot.innerHTML = registrados
+        .map(dg => `<option value="${dg.slot}">DX${dg.slot} · ${h(dg.codigo)} ${h(dg.desc)}</option>`)
+        .join('');
+    const optCambiar = document.querySelector('#dxTipo option[value="CAMBIAR"]');
+    optCambiar.disabled = registrados.length === 0;
+    optCambiar.textContent = registrados.length
+        ? 'Modificar un diagnóstico registrado'
+        : 'Modificar un diagnóstico registrado (no hay ninguno)';
+
+    document.getElementById('dxTitulo').textContent = s ? 'Editar solicitud de diagnóstico' : 'Solicitar diagnóstico CIE-10';
+    document.getElementById('dxTipo').value   = s?.tipo ?? 'AGREGAR';
+    if (s?.slot) selSlot.value = String(s.slot);
+    document.getElementById('dxNuevo').value  = s?.nuevo  ?? '';
+    document.getElementById('dxDesc').value   = s?.desc   ?? '';
+    document.getElementById('dxMotivo').value = s?.motivo ?? '';
+    actualizarDlgDx();
+    document.getElementById('dlgDx').showModal();
+    document.getElementById('dxNuevo').focus();
+}
+
+document.getElementById('dxTipo').addEventListener('change', actualizarDlgDx);
+
+document.getElementById('dxGuardar').addEventListener('click', async () => {
+    const tipo   = document.getElementById('dxTipo').value;
+    const nuevo  = document.getElementById('dxNuevo').value.trim().toUpperCase();
+    const motivo = document.getElementById('dxMotivo').value.trim();
+    if (!nuevo)  { toast('Escribe el código CIE-10', 'err'); return; }
+    if (!motivo) { toast('El motivo es obligatorio', 'err'); return; }
+
+    const body = {
+        id: SESION_ID, pk: pkActual, tipo, nuevo, motivo,
+        desc: document.getElementById('dxDesc').value.trim(),
+    };
+    if (tipo === 'CAMBIAR') body.slot = Number(document.getElementById('dxSlot').value);
+    if (dxIdx !== null)     body.idx  = dxIdx;
+
+    const btn = document.getElementById('dxGuardar');
+    btn.disabled = true;
+    try {
+        await apiSend(dxIdx === null ? 'POST' : 'PUT', 'solicitud-dx', body);
+        document.getElementById('dlgDx').close();
+        toast(dxIdx === null ? 'Solicitud de diagnóstico registrada' : 'Solicitud actualizada', 'ok');
+        await recargarDetalle();
+    } catch (e) {
+        toast('Error: ' + e.message, 'err'); // p.ej. formato CIE-10 no válido: el diálogo sigue abierto
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+async function borrarSolicitudDx(idx) {
+    if (!confirm('¿Quitar esta solicitud de diagnóstico?')) return;
+    try {
+        await apiSend('DELETE', 'solicitud-dx', { id: SESION_ID, pk: pkActual, idx });
+        toast('Solicitud quitada', 'ok');
+        await recargarDetalle();
+    } catch (e) {
+        toast('Error: ' + e.message, 'err');
+    }
+}
+
 // ── Toggle motivo / grupo ──────────────────────────────────────────────────
 function toggleFilaMotivo(key) {
     _filaAbierta[key] = !_filaAbierta[key];
@@ -1188,7 +1351,7 @@ function enfocar(el) {
 
 document.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (document.getElementById('dlgObs').open) return;
+    if (document.querySelector('dialog[open]')) return;
     const t = e.target;
     if (t.matches?.('input, textarea, select')) return;
     if (!detalleData || document.getElementById('detContent').hidden) return;

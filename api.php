@@ -74,6 +74,9 @@ try {
         'POST:revisar-obs'    => rutaPostRevisarObs($gestor),
         'POST:revisar-grupo'  => rutaPostRevisarGrupo($gestor),
         'POST:revisar-varias' => rutaPostRevisarVarias($gestor),
+        'POST:solicitud-dx'   => rutaGuardarSolicitudDx($gestor, null),
+        'PUT:solicitud-dx'    => rutaGuardarSolicitudDx($gestor, (int) (bodyJson()['idx'] ?? -1)),
+        'DELETE:solicitud-dx' => rutaDeleteSolicitudDx($gestor),
         'POST:revalidar'      => rutaPostRevalidar($gestor, $cfg),
         default               => jsonError("Ruta no encontrada: {$method} {$ruta}", 404),
     };
@@ -242,6 +245,11 @@ function rutaGetPrestacion(GestorSesiones $gestor): never
             ['slot' => 1, 'codigo' => $datosPk['diag1_codigo'], 'desc' => $datosPk['diag1_desc']],
             ['slot' => 2, 'codigo' => $datosPk['diag2_codigo'], 'desc' => $datosPk['diag2_desc']],
         ],
+        'solicitudes_dx' => array_map(
+            static fn(int $i, array $s): array => ['idx' => $i] + $s,
+            array_keys($p['solicitudes_dx'] ?? []),
+            $p['solicitudes_dx'] ?? []
+        ),
         'con_observacion' => $conObs,
         'sin_observacion' => $sinObs,
     ]);
@@ -530,6 +538,98 @@ function rutaPostRevisarVarias(GestorSesiones $gestor): never
     $gestor->guardar($id, $estado);
 
     jsonOk(['revisada' => $body['revisada'], 'n' => count($posiciones)]);
+}
+
+// ── Solicitudes de diagnóstico (CIE-10) ───────────────────────────────────────
+//
+// Son de la prestación, no de una fila: se guardan aparte de las observaciones
+// para que en el Excel no las tape la ACCIÓN de mayor prioridad de la fila, y
+// se exportan en su propia columna sobre la primera fila de la prestación.
+
+/** Letra + 2 dígitos + subcategoría opcional (N39, N39.0, N390, S72.001…). */
+function normalizarCie10(string $codigo): string
+{
+    $c = strtoupper(preg_replace('/\s+/', '', $codigo));
+    if (!preg_match('/^[A-Z]\d{2}(\.?[0-9A-Z]{1,4})?$/', $c)) {
+        jsonError("Código CIE-10 no válido: «{$codigo}». Formato esperado: letra y dos dígitos, p.ej. N39.0");
+    }
+    return $c;
+}
+
+/** POST crea ($idx null) · PUT reemplaza la solicitud $idx. */
+function rutaGuardarSolicitudDx(GestorSesiones $gestor, ?int $idx): never
+{
+    $body   = bodyJson();
+    $id     = req($body, 'id');
+    $pkStr  = req($body, 'pk');
+    $tipo   = req($body, 'tipo');
+    $motivo = trim(req($body, 'motivo'));
+    $nuevo  = normalizarCie10(req($body, 'nuevo'));
+
+    if (!in_array($tipo, ['AGREGAR', 'CAMBIAR'], true)) {
+        jsonError('tipo debe ser AGREGAR o CAMBIAR');
+    }
+
+    $estado = $gestor->cargar($id);
+    if (!isset($estado['prestaciones'][$pkStr])) {
+        jsonError("PK no encontrado: {$pkStr}", 404);
+    }
+    $lista = $estado['prestaciones'][$pkStr]['solicitudes_dx'] ?? [];
+    if ($idx !== null && !isset($lista[$idx])) {
+        jsonError("Solicitud no encontrada (idx={$idx})", 404);
+    }
+
+    $datosPk = $gestor->cargarDatosPk($id, $pkStr);
+    $sol = [
+        'tipo'   => $tipo,
+        'nuevo'  => $nuevo,
+        'desc'   => trim((string) ($body['desc'] ?? '')),
+        'motivo' => $motivo,
+        // Primera fila de la prestación: ahí la escribe el Excel
+        'fila'   => min(array_column($datosPk['filas'], 'fila')),
+    ];
+
+    if ($tipo === 'CAMBIAR') {
+        // Se guarda el código que se reemplaza para que el Excel diga qué cambia
+        $slot   = (int) ($body['slot'] ?? 0);
+        $actual = trim((string) ($datosPk["diag{$slot}_codigo"] ?? ''));
+        if (!in_array($slot, [1, 2], true) || $actual === '') {
+            jsonError('Para modificar hay que elegir un diagnóstico registrado (1 o 2)');
+        }
+        if (strtoupper($actual) === $nuevo) {
+            jsonError("El código nuevo es igual al registrado ({$actual})");
+        }
+        $sol['slot']   = $slot;
+        $sol['actual'] = $actual;
+    }
+
+    if ($idx === null) {
+        $lista[] = $sol;
+    } else {
+        $lista[$idx] = $sol;
+    }
+    $estado['prestaciones'][$pkStr]['solicitudes_dx'] = array_values($lista);
+    $gestor->guardar($id, $estado);
+
+    jsonOk(null);
+}
+
+function rutaDeleteSolicitudDx(GestorSesiones $gestor): never
+{
+    $body  = bodyJson();
+    $id    = req($body, 'id');
+    $pkStr = req($body, 'pk');
+    $idx   = (int) ($body['idx'] ?? -1);
+
+    $estado = $gestor->cargar($id);
+    if (!isset($estado['prestaciones'][$pkStr]['solicitudes_dx'][$idx])) {
+        jsonError("Solicitud no encontrada (idx={$idx})", 404);
+    }
+
+    array_splice($estado['prestaciones'][$pkStr]['solicitudes_dx'], $idx, 1);
+    $gestor->guardar($id, $estado);
+
+    jsonOk(null);
 }
 
 // ── POST validar ──────────────────────────────────────────────────────────────
