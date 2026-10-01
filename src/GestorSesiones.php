@@ -224,6 +224,30 @@ class GestorSesiones
     }
 
     /**
+     * Códigos CPMS distintos de cada prestación, para buscar por código desde
+     * la lista lateral.  Sesiones sin datos.json devuelven [].
+     *
+     * @return array<string, list<string>>  pk → códigos
+     */
+    public function codigosPorPk(string $id): array
+    {
+        $this->validarId($id);
+        $ruta = $this->carpeta($id) . DIRECTORY_SEPARATOR . 'datos.json';
+        if (!file_exists($ruta)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($this->leerJson($ruta) as $pk => $d) {
+            $out[(string) $pk] = array_values(array_unique(array_map(
+                static fn(array $f): string => (string) $f['codigo'],
+                $d['filas'] ?? []
+            )));
+        }
+        return $out;
+    }
+
+    /**
      * Re-ejecuta las observaciones de sistema sobre la sesión existente,
      * conservando las observaciones manuales y el flag validada de cada prestación.
      *

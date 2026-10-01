@@ -24,7 +24,8 @@ use Validador\Texto;
  *      (y su par si V es un par y ambos están presentes).
  *      Eliminar todo otro código de la familia.
  *      Si V exige un código que no llegó → SUGERENCIA de agregarlo.
- *      Si los códigos de V llegaron en cantidades distintas → REVISAR.
+ *      Si los códigos de V llegaron en cantidades distintas → IGUALAR <código del par>
+ *      en cada uno (si el código está duplicado, el motor lo fusiona con su AGREGAR).
  *   2. Si ninguno de V está presente pero hay CBC (85025 ó 85027):
  *      Conservar el CBC presente, emitir SUGERENCIA hacia el set V.
  *      Eliminar todo otro código de la familia.

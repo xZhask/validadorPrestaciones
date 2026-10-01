@@ -43,6 +43,7 @@ function ipressCorta(string $nombre): string
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="assets/theme.js"></script>
+    <script src="assets/confirmar.js"></script>
     <style>
 /* ── Tokens del mockup (idénticos a revisar.php) ─────────────────────────── */
 :root {
@@ -175,7 +176,7 @@ body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
             Volver al validador
         </a>
-        <span class="count"><?= count($sesiones) ?> sesión<?= count($sesiones) !== 1 ? 'es' : '' ?> registrada<?= count($sesiones) !== 1 ? 's' : '' ?></span>
+        <span class="count"><?= count($sesiones) ?> <?= count($sesiones) === 1 ? 'sesión registrada' : 'sesiones registradas' ?></span>
     </div>
 
     <?php if (empty($sesiones)): ?>
@@ -262,12 +263,18 @@ document.querySelectorAll('.aud-borrar').forEach(function (btn) {
         const archivo  = btn.dataset.archivo;
         const validadas = Number(btn.dataset.validadas);
 
-        let msg = 'Se eliminará la auditoría "' + archivo + '" junto con su Excel original.\n\n'
-                + 'Esta acción no se puede deshacer.';
-        if (validadas > 0) {
-            msg += '\n\nAtención: tiene ' + validadas + ' prestación(es) ya validada(s). Ese avance se pierde.';
-        }
-        if (!confirm(msg)) return;
+        const ok = await confirmar({
+            titulo:  'Eliminar auditoría',
+            mensaje: 'Se eliminará la auditoría "' + archivo + '" junto con su Excel original.\n'
+                   + 'Esta acción no se puede deshacer.',
+            aviso:   validadas > 0
+                ? 'Tiene ' + validadas + (validadas === 1 ? ' prestación ya validada' : ' prestaciones ya validadas')
+                  + ': ese avance se pierde.'
+                : '',
+            aceptar: 'Eliminar auditoría',
+            peligro: true,
+        });
+        if (!ok) return;
 
         btn.disabled = true;
         try {

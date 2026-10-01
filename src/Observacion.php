@@ -43,7 +43,7 @@ final class Observacion
         /** Texto explicativo del problema detectado. */
         public readonly string     $motivo,
 
-        /** Acción sugerida al auditor ("ELIMINAR", "REVISAR", etc.). */
+        /** Acción sugerida al auditor ("ELIMINAR", "IGUALAR 85007", etc.). */
         public readonly string     $accion,
     ) {}
 }

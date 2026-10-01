@@ -35,6 +35,7 @@ $idJson     = json_encode($id, JSON_UNESCAPED_UNICODE);
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="assets/theme.js"></script>
+<script src="assets/confirmar.js"></script>
 <link rel="stylesheet" href="assets/estilos.css">
 <style>
 /* ── Tokens del mockup ────────────────────────────────────────────────── */
@@ -109,6 +110,9 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .rail-head h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);font-weight:600;margin:0}
 .rail-search{width:100%;font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line-strong);border-radius:6px;margin:10px 0 8px;background:var(--surface);color:var(--ink)}
 .rail-search:focus{outline:none;border-color:var(--accent)}
+.rail-filtros{display:flex;gap:6px;margin:-2px 0 8px}
+.rail-filtros .rail-search{margin:0;flex:0 0 102px;min-width:0;font-family:var(--mono)}
+.rail-filtros .tb-select{flex:1;min-width:0;padding-top:6px;padding-bottom:6px}
 .seg{display:flex;gap:4px;margin-bottom:6px}
 .seg button{flex:1;font-size:12px;padding:5px;border:1px solid var(--line);background:var(--surface);border-radius:6px;color:var(--muted);cursor:pointer;font-family:inherit;transition:background .1s,color .1s}
 .seg button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
@@ -122,6 +126,7 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .pitem .sub{font-size:11.5px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .ip-chip{font-size:10.5px;padding:1px 6px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
 .obs-n{font-size:11px;color:var(--accent-ink);font-weight:600}
+.dx-chip{font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--sug-bg);border:1px solid var(--sug-st);color:var(--sug-tx)}
 .plist-empty{padding:1.5rem .75rem;text-align:center;color:var(--muted);font-size:12.5px}
 
 /* ── Detail ───────────────────────────────────────────────────────────── */
@@ -161,6 +166,13 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .btn-validar.validada{background:var(--accent);border:1px solid var(--accent);color:#fff}
 .btn-validar.validada:hover{background:var(--accent-ink)}
 .btn-validar:disabled{opacity:.5;cursor:not-allowed}
+.gen-acts{display:flex;gap:8px;flex-shrink:0;align-items:center}
+.btn-sig{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;border-radius:var(--radius);padding:8px 12px;cursor:pointer;white-space:nowrap;font-family:inherit;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted)}
+.btn-sig:hover{background:var(--surface-2);color:var(--ink)}
+.btn-sig svg{width:15px;height:15px;stroke-width:2.2;fill:none;stroke:currentColor}
+.btn-sig kbd{font-family:var(--mono);font-size:10.5px;padding:0 4px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;background:var(--surface);color:var(--muted)}
+/* Filas del código CPMS buscado en la lista lateral */
+.crow.hl-cpms,.drow.hl-cpms,.sitem.hl-cpms{box-shadow:inset 3px 0 0 var(--accent);background:var(--accent-bg)}
 .btn-validar svg{width:15px;height:15px;stroke-width:2.5;fill:none;stroke:currentColor}
 
 /* Board */
@@ -321,6 +333,12 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
         <div class="rail-head">
             <h2>Prestaciones</h2>
             <input type="search" class="rail-search" id="sbSearch" placeholder="Buscar PK o IPRESS…" autocomplete="off">
+            <div class="rail-filtros">
+                <input type="search" class="rail-search" id="sbCpms" placeholder="Código CPMS" autocomplete="off" title="Prestaciones que incluyen este código (coincidencia desde el inicio)">
+                <select class="tb-select" id="sbFamilia" title="Prestaciones con observaciones de esta familia de regla">
+                    <option value="">Toda regla</option>
+                </select>
+            </div>
             <div class="seg">
                 <button class="on" data-estado="">Todas</button>
                 <button data-estado="pendiente">Pendientes</button>
@@ -358,9 +376,9 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
             <label class="field-lbl" for="dlgAccion">Acción</label>
             <select class="field-sel" id="dlgAccion">
                 <option value="ELIMINAR">ELIMINAR</option>
-                <option value="REVISAR">REVISAR</option>
                 <option value="AGREGAR">AGREGAR</option>
                 <option value="CAMBIAR POR">CAMBIAR POR</option>
+                <option value="IGUALAR">IGUALAR</option>
             </select>
         </div>
         <div id="dlgCantidadWrap" style="display:none">
@@ -374,6 +392,10 @@ dialog::backdrop{background:rgba(0,0,0,.38)}
         <div id="dlgCambioWrap" style="display:none">
             <label class="field-lbl" for="dlgCambioCodigo">Cambiar por (nuevo código CPMS)</label>
             <input type="text" class="field-sel" id="dlgCambioCodigo" placeholder="Escribe el código nuevo">
+        </div>
+        <div id="dlgIgualarWrap" style="display:none">
+            <label class="field-lbl" for="dlgIgualarCodigo">Igualar cantidad con (código del par)</label>
+            <input type="text" class="field-sel" id="dlgIgualarCodigo" placeholder="Ej. 85007">
         </div>
     </div>
     <div class="dlg-foot">
@@ -430,9 +452,11 @@ let sesionData  = null;
 let detalleData = null;
 let pkActual    = null;
 
-let fTexto  = '';
-let fIpress = '';
-let fEstado = '';
+let fTexto   = '';
+let fIpress  = '';
+let fEstado  = '';
+let fCpms    = '';   // en mayúsculas; coincide desde el inicio del código
+let fFamilia = '';
 
 const _obs         = {};
 const _filaAbierta = {};
@@ -559,6 +583,7 @@ async function init() {
     try {
         sesionData = await apiGet('sesion', { id: SESION_ID });
         poblarIpress();
+        poblarFamilias();
         renderSidebar();
     } catch (e) {
         toast('Error al cargar sesión: ' + e.message, 'err');
@@ -575,7 +600,30 @@ function poblarIpress() {
     });
 }
 
+function poblarFamilias() {
+    const sel = document.getElementById('sbFamilia');
+    FAM_ORDER.forEach(f => sel.add(new Option(FAM_META[f].nombre, f)));
+    // No es una familia de regla, pero es lo que hay que repasar antes de entregar
+    const sep = new Option('──────────', ''); sep.disabled = true;
+    sel.add(sep);
+    sel.add(new Option('Con solicitud CIE-10', FILTRO_DX));
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────
+const FILTRO_DX = 'cie10';   // valor del desplegable de reglas para "Con solicitud CIE-10"
+const esCpmsBuscado = codigo => !!fCpms && String(codigo ?? '').toUpperCase().startsWith(fCpms);
+
+/** Filtros de la lista lateral salvo el de estado (Todas/Pendientes/Validadas). */
+function pasaFiltros(p) {
+    const txt = fTexto.toLowerCase();
+    if (fIpress && p.ipress_nom !== fIpress) return false;
+    if (txt && !p.pk.includes(txt) && !p.ipress_nom.toLowerCase().includes(txt)) return false;
+    if (fCpms && !(p.codigos || []).some(esCpmsBuscado)) return false;
+    if (fFamilia === FILTRO_DX) { if (!p.n_dx) return false; }
+    else if (fFamilia && !(p.reglas || []).some(r => familiaDeRegla(r) === fFamilia)) return false;
+    return true;
+}
+
 function renderSidebar() {
     if (!sesionData) return;
 
@@ -584,16 +632,14 @@ function renderSidebar() {
     document.getElementById('sbProgTxt').textContent = `${validadas} / ${total} validadas`;
     document.getElementById('sbProgBar').style.width = `${Math.min(100, pct)}%`;
 
-    const txt = fTexto.toLowerCase();
     const lista = prestaciones.filter(p => {
         if (fEstado === 'pendiente' && p.validada) return false;
         if (fEstado === 'validada'  && !p.validada) return false;
-        if (fIpress && p.ipress_nom !== fIpress) return false;
-        if (txt && !p.pk.includes(txt) && !p.ipress_nom.toLowerCase().includes(txt)) return false;
-        return true;
+        return pasaFiltros(p);
     });
 
-    document.getElementById('railCount').textContent = `${lista.length} prestaciones`;
+    document.getElementById('railCount').textContent =
+        `${lista.length} ${lista.length === 1 ? 'prestación' : 'prestaciones'}`;
 
     const cont = document.getElementById('listaPres');
     cont.innerHTML = '';
@@ -619,6 +665,7 @@ function renderSidebar() {
                 <div class="sub">
                     ${ipNom ? `<span class="ip-chip">${h(ipLabel)}</span>` : ''}
                     <span class="obs-n">${nObs} obs.</span>
+                    ${p.n_dx ? `<span class="dx-chip" title="Solicitudes de diagnóstico CIE-10">CIE-10 ×${p.n_dx}</span>` : ''}
                 </div>
             </div>`;
         el.addEventListener('click', () => seleccionar(p.pk));
@@ -646,6 +693,28 @@ async function seleccionar(pk) {
     } catch (e) {
         content.innerHTML = `<div style="padding:2rem;color:var(--tipo-tx)">Error: ${h(e.message)}</div>`;
     }
+}
+
+/**
+ * Abre la siguiente prestación sin validar en el orden de la lista, a partir de
+ * la actual y volviendo al inicio.  Respeta los filtros (IPRESS, búsqueda,
+ * CPMS, regla) pero no el de estado: lo que se busca es justamente una pendiente.
+ */
+function siguientePendiente() {
+    if (!sesionData) return;
+    // La posición se toma en la lista completa: la abierta puede haber dejado
+    // de cumplir el filtro (p. ej. al quitarle su última solicitud CIE-10)
+    const todas = sesionData.prestaciones;
+    const desde = todas.findIndex(p => p.pk === pkActual);
+    const orden = [...todas.slice(desde + 1), ...todas.slice(0, Math.max(desde, 0))];
+    const sig   = orden.find(p => !p.validada && pasaFiltros(p));
+    if (!sig) {
+        const hayFiltros = fTexto || fIpress || fCpms || fFamilia;
+        toast('No quedan prestaciones pendientes' + (hayFiltros ? ' con los filtros actuales' : ''));
+        return;
+    }
+    seleccionar(sig.pk);   // re-renderiza la lista antes de esperar al servidor
+    document.querySelector('#listaPres .pitem.on')?.scrollIntoView({ block: 'nearest' });
 }
 
 async function recargarDetalle() {
@@ -732,9 +801,15 @@ function renderDetalle() {
                 <div class="dx">${dxHtml}${btnDx}</div>
                 ${solicitudesHtml}
             </div>
-            <button class="btn-validar ${d.validada ? 'validada' : 'pendiente'}" id="btnValidar" onclick="toggleValidar()">
-                ${chkSvg}${d.validada ? 'Prestación validada' : 'Marcar como validada'}
-            </button>
+            <div class="gen-acts">
+                <button class="btn-validar ${d.validada ? 'validada' : 'pendiente'}" id="btnValidar" onclick="toggleValidar()">
+                    ${chkSvg}${d.validada ? 'Prestación validada' : 'Marcar como validada'}
+                </button>
+                <button class="btn-sig" onclick="siguientePendiente()" title="Abrir la siguiente prestación sin validar (respeta los filtros de la lista)">
+                    Siguiente pendiente <kbd>N</kbd>
+                    <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </button>
+            </div>
         </div>
         <div class="board">
             <section class="col">
@@ -745,7 +820,7 @@ function renderDetalle() {
                 </div>
                 <div class="col-body">
                     ${gruposHtml
-                        ? `<div class="kbd-hint"><kbd>↑</kbd> <kbd>↓</kbd> moverse · <kbd>Espacio</kbd> aprobar y avanzar · <kbd>Enter</kbd> ver filas o motivo</div>${gruposHtml}`
+                        ? `<div class="kbd-hint"><kbd>↑</kbd> <kbd>↓</kbd> moverse · <kbd>Espacio</kbd> aprobar y avanzar · <kbd>Enter</kbd> ver filas o motivo · <kbd>N</kbd> siguiente pendiente</div>${gruposHtml}`
                         : '<div class="col-empty">Sin procedimientos con observaciones</div>'}
                 </div>
             </section>
@@ -937,7 +1012,7 @@ function renderCodigoDup(g) {
     const detalle = abierto ? `<div class="dexp">${g.items.map(renderObsRow).join('')}</div>` : '';
 
     return `<div class="dgrp ${todas ? 'rev' : ''}">
-        <div class="drow" tabindex="0" data-key="${h('dup:' + g.codigo)}" onclick="toggleDup(${codJs})">
+        <div class="drow ${esCpmsBuscado(g.codigo) ? 'hl-cpms' : ''}" tabindex="0" data-key="${h('dup:' + g.codigo)}" onclick="toggleDup(${codJs})">
             <button class="chk ${revN && !todas ? 'part' : ''}" title="Aprobar el código completo" onclick="event.stopPropagation();aprobarCodigo(${codJs})">
                 <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
             </button>
@@ -968,7 +1043,7 @@ function renderObsRow(item) {
     const motHtml  = abierta ? `<div class="cmot">${h(item.motivo)}${manTag}</div>` : '';
     const val      = `${item.cantidad} × S/.${parseFloat(item.valor || 0).toFixed(2)}`;
 
-    return `<div class="crow ${item.revisada ? 'rev' : ''}" tabindex="0" data-key="obs:${key}" onclick="toggleFilaMotivo('${key}')">
+    return `<div class="crow ${item.revisada ? 'rev' : ''} ${esCpmsBuscado(item.codigo) ? 'hl-cpms' : ''}" tabindex="0" data-key="obs:${key}" onclick="toggleFilaMotivo('${key}')">
         <button class="chk" title="Marcar revisada" onclick="event.stopPropagation();marcarObs(${item.fila},${item.idx})">
             <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
         </button>
@@ -990,7 +1065,7 @@ function renderObsRow(item) {
 
 function renderSinObs(proc) {
     const val = `${proc.cantidad} × S/.${parseFloat(proc.valor || 0).toFixed(2)}`;
-    return `<div class="sitem">
+    return `<div class="sitem ${esCpmsBuscado(proc.codigo) ? 'hl-cpms' : ''}">
         <span class="cfila">F.${proc.fila}</span>
         <span class="ccod">${h(proc.codigo)}</span>
         <span class="cdesc" title="${h(proc.desc)}">${h(proc.desc)}</span>
@@ -1019,7 +1094,7 @@ async function toggleValidar() {
         if (enLista) enLista.validada = r.validada;
         renderDetalle();
         renderSidebar();
-        toast(r.validada ? 'Prestación validada' : 'Validación desmarcada', 'ok');
+        toast(r.validada ? 'Prestación validada · N para ir a la siguiente pendiente' : 'Validación desmarcada', 'ok');
     } catch (e) {
         toast('Error: ' + e.message, 'err');
         btn.disabled = false;
@@ -1028,7 +1103,12 @@ async function toggleValidar() {
 
 // ── Re-validar sesión ──────────────────────────────────────────────────────
 async function revalidarSesion() {
-    if (!confirm('Se re-ejecutarán todas las reglas automáticas sobre el archivo original.\nLas observaciones manuales y el estado de validación se conservarán.\n\n¿Continuar?')) return;
+    if (!await confirmar({
+        titulo:  'Re-validar la sesión',
+        mensaje: 'Se re-ejecutarán todas las reglas automáticas sobre el archivo original.\n'
+               + 'Las observaciones manuales y el estado de validación se conservarán.',
+        aceptar: 'Re-validar',
+    })) return;
     const btn = document.getElementById('btnRevalidar');
     btn.disabled = true;
     btn.textContent = 'Re-validando…';
@@ -1054,15 +1134,41 @@ let dlgMode = null;
 let dlgFila = null;
 let dlgIdx  = null;
 
+// El campo "Igualar con" se ofrece en AGREGAR solo si la observación ya traía
+// el par de hemograma fusionado: así no se pierde al editar el duplicado.
+let dlgConIgualar = false;
+
+function mostrarCamposDlg() {
+    const v = document.getElementById('dlgAccion').value;
+    document.getElementById('dlgCantidadWrap').style.display = v === 'AGREGAR'     ? '' : 'none';
+    document.getElementById('dlgCambioWrap').style.display   = v === 'CAMBIAR POR' ? '' : 'none';
+    document.getElementById('dlgIgualarWrap').style.display  =
+        v === 'IGUALAR' || (v === 'AGREGAR' && dlgConIgualar) ? '' : 'none';
+}
+
+// Una acción que ya no está en la lista (p. ej. REVISAR de sesiones antiguas)
+// se ofrece como opción temporal: sin ella el desplegable quedaría vacío y
+// guardar borraría la acción.
+function ofrecerAccionLegada(accion) {
+    const sel = document.getElementById('dlgAccion');
+    sel.querySelectorAll('option[data-legada]').forEach(o => o.remove());
+    if (accion && ![...sel.options].some(o => o.value === accion)) {
+        const o = new Option(`${accion} (acción antigua)`, accion);
+        o.dataset.legada = '1';
+        sel.add(o);
+    }
+}
+
 function abrirAgregar(fila) {
-    dlgMode = 'add'; dlgFila = fila; dlgIdx = null;
+    dlgMode = 'add'; dlgFila = fila; dlgIdx = null; dlgConIgualar = false;
+    ofrecerAccionLegada(null);
     document.getElementById('dlgTitulo').textContent = `Nueva observación — Fila ${fila}`;
     document.getElementById('dlgAccion').value = 'ELIMINAR';
     document.getElementById('dlgCantidad').value = '1';
-    document.getElementById('dlgCantidadWrap').style.display = 'none';
     document.getElementById('dlgCambioCodigo').value = '';
-    document.getElementById('dlgCambioWrap').style.display = 'none';
+    document.getElementById('dlgIgualarCodigo').value = '';
     document.getElementById('dlgMotivo').value = '';
+    mostrarCamposDlg();
     document.getElementById('dlgObs').showModal();
 }
 
@@ -1071,45 +1177,40 @@ function abrirEditar(fila, idx) {
     if (!obs) { toast('Observación no encontrada', 'err'); return; }
     dlgMode = 'edit'; dlgFila = fila; dlgIdx = idx;
     document.getElementById('dlgTitulo').textContent = `Editar observación — Fila ${fila}`;
-    const mQty = (obs.accion || '').match(/^AGREGAR\s*[—\-]\s*cantidad\s*=\s*(\d+)/i);
-    const mCmb = (obs.accion || '').match(/^CAMBIAR POR\s*(.*)$/i);
-    if (mQty) {
-        document.getElementById('dlgAccion').value = 'AGREGAR';
-        document.getElementById('dlgCantidad').value = mQty[1];
-        document.getElementById('dlgCantidadWrap').style.display = '';
-        document.getElementById('dlgCambioCodigo').value = '';
-        document.getElementById('dlgCambioWrap').style.display = 'none';
-    } else if (mCmb) {
-        document.getElementById('dlgAccion').value = 'CAMBIAR POR';
-        document.getElementById('dlgCambioCodigo').value = mCmb[1].trim();
-        document.getElementById('dlgCambioWrap').style.display = '';
-        document.getElementById('dlgCantidad').value = '1';
-        document.getElementById('dlgCantidadWrap').style.display = 'none';
-    } else {
-        document.getElementById('dlgAccion').value = obs.accion || 'ELIMINAR';
-        document.getElementById('dlgCantidad').value = '1';
-        document.getElementById('dlgCantidadWrap').style.display = 'none';
-        document.getElementById('dlgCambioCodigo').value = '';
-        document.getElementById('dlgCambioWrap').style.display = 'none';
-    }
+    const accion = obs.accion || '';
+    const mQty = accion.match(/^AGREGAR\s*[—\-]\s*cantidad\s*=\s*(\d+)(?:\s*-\s*IGUALAR\s+(.*))?$/i);
+    const mCmb = accion.match(/^CAMBIAR POR\s*(.*)$/i);
+    const mIgu = accion.match(/^IGUALAR\s*(.*)$/i);
+    let sel = accion || 'ELIMINAR', cant = '1', cambio = '', igualar = '';
+    if (mQty)      { sel = 'AGREGAR';     cant = mQty[1]; igualar = (mQty[2] || '').trim(); }
+    else if (mCmb) { sel = 'CAMBIAR POR'; cambio = mCmb[1].trim(); }
+    else if (mIgu) { sel = 'IGUALAR';     igualar = mIgu[1].trim(); }
+    dlgConIgualar = !!(mQty && mQty[2]);
+    ofrecerAccionLegada(sel);
+    document.getElementById('dlgAccion').value        = sel;
+    document.getElementById('dlgCantidad').value      = cant;
+    document.getElementById('dlgCambioCodigo').value  = cambio;
+    document.getElementById('dlgIgualarCodigo').value = igualar;
     document.getElementById('dlgMotivo').value = obs.motivo || '';
+    mostrarCamposDlg();
     document.getElementById('dlgObs').showModal();
 }
 
-document.getElementById('dlgAccion').addEventListener('change', () => {
-    const v = document.getElementById('dlgAccion').value;
-    document.getElementById('dlgCantidadWrap').style.display = v === 'AGREGAR'     ? '' : 'none';
-    document.getElementById('dlgCambioWrap').style.display   = v === 'CAMBIAR POR' ? '' : 'none';
-});
+document.getElementById('dlgAccion').addEventListener('change', mostrarCamposDlg);
 
 document.getElementById('dlgGuardar').addEventListener('click', async () => {
     let accion = document.getElementById('dlgAccion').value.trim();
+    const igualar = document.getElementById('dlgIgualarCodigo').value.trim();
     if (accion === 'AGREGAR') {
         const n = parseInt(document.getElementById('dlgCantidad').value, 10) || 1;
         accion = `AGREGAR — cantidad = ${n}`;
+        if (dlgConIgualar && igualar) accion += ` - IGUALAR ${igualar}`;
     } else if (accion === 'CAMBIAR POR') {
         const cod = document.getElementById('dlgCambioCodigo').value.trim();
         accion = cod ? `CAMBIAR POR ${cod}` : 'CAMBIAR POR';
+    } else if (accion === 'IGUALAR') {
+        if (!igualar) { toast('Indica el código con el que se iguala la cantidad', 'err'); return; }
+        accion = `IGUALAR ${igualar}`;
     }
     const motivo = document.getElementById('dlgMotivo').value.trim();
     if (!motivo) { toast('El motivo es obligatorio', 'err'); return; }
@@ -1227,7 +1328,16 @@ document.getElementById('dxGuardar').addEventListener('click', async () => {
 });
 
 async function borrarSolicitudDx(idx) {
-    if (!confirm('¿Quitar esta solicitud de diagnóstico?')) return;
+    const s   = (detalleData.solicitudes_dx || []).find(x => x.idx === idx);
+    const que = !s ? '' : s.tipo === 'CAMBIAR'
+        ? ` (cambiar DX${s.slot} ${s.actual} → ${s.nuevo})`
+        : ` (agregar ${s.nuevo})`;
+    if (!await confirmar({
+        titulo:  'Quitar solicitud de diagnóstico',
+        mensaje: `Se quitará la solicitud${que}.`,
+        aceptar: 'Quitar solicitud',
+        peligro: true,
+    })) return;
     try {
         await apiSend('DELETE', 'solicitud-dx', { id: SESION_ID, pk: pkActual, idx });
         toast('Solicitud quitada', 'ok');
@@ -1354,6 +1464,8 @@ document.addEventListener('keydown', e => {
     if (document.querySelector('dialog[open]')) return;
     const t = e.target;
     if (t.matches?.('input, textarea, select')) return;
+    // Funciona aunque aún no haya prestación abierta: abre la primera pendiente
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); siguientePendiente(); return; }
     if (!detalleData || document.getElementById('detContent').hidden) return;
 
     const navs   = [...document.querySelectorAll('#detContent [data-key]')];
@@ -1400,7 +1512,16 @@ document.addEventListener('keydown', e => {
 
 // ── Borrar obs ─────────────────────────────────────────────────────────────
 async function borrarObs(fila, idx) {
-    if (!confirm('¿Eliminar esta observación?')) return;
+    const obs  = _obs[`${fila}_${idx}`];
+    const proc = detalleData.con_observacion.find(p => p.fila === fila);
+    if (!await confirmar({
+        titulo:  'Eliminar observación',
+        mensaje: `Se eliminará la observación «${obs?.accion ?? ''}» de la fila ${fila}`
+               + (proc ? ` (código ${proc.codigo}).` : '.')
+               + (obs?.origen === 'manual' ? '' : '\nEs del sistema: volverá a aparecer si se re-valida la sesión.'),
+        aceptar: 'Eliminar observación',
+        peligro: true,
+    })) return;
     try {
         await apiMethod('DELETE', { id: SESION_ID, pk: pkActual, fila, idx });
         toast('Observación eliminada', 'ok');
@@ -1412,7 +1533,12 @@ async function borrarObs(fila, idx) {
 
 // ── Eliminar CPMS ──────────────────────────────────────────────────────────
 async function doEliminarCpms(fila, codigo) {
-    if (!confirm(`¿Marcar código ${codigo} (fila ${fila}) para eliminación?`)) return;
+    if (!await confirmar({
+        titulo:  'Eliminar CPMS',
+        mensaje: `Se agregará una observación ELIMINAR al código ${codigo} de la fila ${fila}.`,
+        aceptar: 'Marcar para eliminar',
+        peligro: true,
+    })) return;
     try {
         await apiPost('eliminar-cpms', { id: SESION_ID, pk: pkActual, fila, codigo });
         toast(`Código ${codigo} marcado para eliminar`, 'ok');
@@ -1430,6 +1556,17 @@ document.getElementById('sbSearch').addEventListener('input', e => {
 
 document.getElementById('sbIpress').addEventListener('change', e => {
     fIpress = e.target.value;
+    renderSidebar();
+});
+
+document.getElementById('sbCpms').addEventListener('input', e => {
+    fCpms = e.target.value.trim().toUpperCase();
+    renderSidebar();
+    if (detalleData) renderDetalle();   // resaltar el código en la prestación abierta
+});
+
+document.getElementById('sbFamilia').addEventListener('change', e => {
+    fFamilia = e.target.value;
     renderSidebar();
 });
 

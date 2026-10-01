@@ -162,7 +162,7 @@ final del Excel, sobre la primera fila de la prestación. Re-validar no las modi
 |-------|-------|-----------|-------------|
 | Códigos prohibidos | 🔴 Rojo `#FFCCCC` | 5 (mayor) | 93784, 99246, 99246.01 y 99246.02 no se permiten en atenciones de tipo 2 o 3; 15000 no se permite en ningún tipo |
 | Códigos duplicados | 🟣 Violeta `#E8CCFF` | 4 | Un mismo código CPMS aparece más de una vez en la misma atención; se consolida la cantidad en la primera fila |
-| Redundancia Hemograma | 🟡 Ámbar `#FFE599` | 3 | El registro válido depende de la IPRESS: Arequipa y Chiclayo exigen el par 85027 + 85007 en cantidades iguales; A. B. Leguía y Geriátrico usan 85025. El resto de la familia (85004 incluido) se elimina por redundancia; si las cantidades del par no coinciden se marca `REVISAR`, y si falta uno de los dos se emite una sugerencia |
+| Redundancia Hemograma | 🟡 Ámbar `#FFE599` | 3 | El registro válido depende de la IPRESS: Arequipa y Chiclayo exigen el par 85027 + 85007 en cantidades iguales; A. B. Leguía y Geriátrico usan 85025. El resto de la familia (85004 incluido) se elimina por redundancia; si las cantidades del par no coinciden se marca `IGUALAR <código del par>` en cada uno (fusionado con el `AGREGAR` de Duplicados si el código viene repetido), y si falta uno de los dos se emite una sugerencia |
 | Redundancia Urocultivo | 🩵 Turquesa `#B7E1E4` | 2 | Dos o más códigos distintos de urocultivo en la misma atención; se conserva el de mayor valor |
 | Redundancia Coagulación | 🩷 Rosa `#F4CCE4` | 2 | Dos o más códigos distintos de tiempo de coagulación (85345, 85347, 85348); se conserva siempre el 85345 si está presente |
 
@@ -210,7 +210,8 @@ Edita `src/config.php` para ajustar:
 - **`hoja`**: nombre de la hoja Excel a leer (por defecto `DATA`)
 - **`columnas`**: nombres de las columnas a localizar (tolerante a acentos y mayúsculas)
 - **`grupos`**: códigos CPMS que forman cada grupo de redundancia
-- **`colores`**: colores y prioridades por tipo de regla
+- **`prohibidos`**: códigos CPMS no permitidos y los tipos de atención en que se prohíben (vacío = en cualquiera)
+- **`colores`**: colores y prioridades por tipo de regla (incluye Duplicados)
 - **`limites.memory`**: memoria máxima PHP (por defecto `1G`)
 - **`limites.timeout`**: tiempo máximo de ejecución en segundos (por defecto `120`)
 - **`limites.max_filas_tabla`**: máximo de filas mostradas en la tabla web (por defecto `5000`)

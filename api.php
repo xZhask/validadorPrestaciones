@@ -166,14 +166,19 @@ function rutaGetSesion(GestorSesiones $gestor): never
 
     $validadas = 0;
     $lista     = [];
+    $codigos   = $gestor->codigosPorPk($id);
 
     foreach ($estado['prestaciones'] as $pk => $p) {
         if ($p['validada']) {
             $validadas++;
         }
-        $nObs = 0;
+        $nObs   = 0;
+        $reglas = [];
         foreach (($p['observaciones'] ?? []) as $obsFilas) {
             $nObs += count($obsFilas);
+            foreach ($obsFilas as $obs) {
+                $reglas[$obs['regla']] = true;
+            }
         }
         $lista[] = [
             'pk'         => (string) $pk,
@@ -181,6 +186,10 @@ function rutaGetSesion(GestorSesiones $gestor): never
             'ipress_cod' => $p['ipress_cod'] ?? '',
             'ipress_nom' => $p['ipress_nom'] ?? '',
             'n_obs'      => $nObs,
+            'n_dx'       => count($p['solicitudes_dx'] ?? []),
+            // Para buscar por código CPMS y filtrar por familia de regla
+            'codigos'    => $codigos[(string) $pk] ?? [],
+            'reglas'     => array_keys($reglas),
         ];
     }
 
