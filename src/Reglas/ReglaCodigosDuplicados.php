@@ -20,16 +20,21 @@ use Validador\Observacion;
  *
  * Cubre automáticamente HbA1c (83036) y consejerías (1 por CPMS por prestación).
  *
- * Prioridad 4 / color violeta.
+ * Color y prioridad vienen de config.php (ELIMINAR_DUPLICADO: violeta, 4).
  */
 class ReglaCodigosDuplicados implements ReglaInterface
 {
     public const CODIGO = 'DUPLICADO';
 
+    public function __construct(
+        private readonly string $colorHex,
+        private readonly int    $prioridadVal,
+    ) {}
+
     public function codigo(): string { return self::CODIGO; }
     public function nombre(): string { return 'Códigos duplicados'; }
-    public function color(): string  { return 'E8CCFF'; }
-    public function prioridad(): int { return 4; }
+    public function color(): string  { return $this->colorHex; }
+    public function prioridad(): int { return $this->prioridadVal; }
 
     public function evaluar(string $pk, array $atencion): array
     {

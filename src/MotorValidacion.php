@@ -12,7 +12,7 @@ use Validador\Reglas\ReglaInterface;
  *
  * Uso:
  *   $motor = new MotorValidacion();
- *   $motor->registrar(new ReglaCodigosDuplicados());
+ *   $motor->registrar(new ReglaCodigosDuplicados('E8CCFF', 4));
  *   $motor->registrar(new ReglaRedundanciaGrupo(...));
  *   $resultado = $motor->validar($datos['atenciones']);
  */

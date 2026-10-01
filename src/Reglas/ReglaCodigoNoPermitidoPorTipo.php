@@ -10,8 +10,8 @@ use Validador\Observacion;
  * Regla genérica parametrizable: marca cualquier fila donde el COD. CPMS
  * especificado aparezca en un TIPO DE ATENCIÓN prohibido.
  *
- * Instancia canónica en index.php:
- *   código 93784 en tipos 2 y 3 → ELIMINAR — prioridad 4 / color rojo.
+ * construirMotor.php registra una instancia por cada código de
+ * config.php['prohibidos'] (p. ej. 93784 en tipos 2 y 3 → ELIMINAR, rojo).
  */
 class ReglaCodigoNoPermitidoPorTipo implements ReglaInterface
 {

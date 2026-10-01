@@ -69,6 +69,18 @@ return [
         ],
     ],
 
+    // ── Códigos no permitidos ──────────────────────────────────────────────
+    // codigo CPMS => tipos de atención en que se prohíbe ([] = en cualquiera)
+    // y la nota que completa el nombre de la regla:
+    //   "Código <codigo> no permitido (<nota>)"
+    'prohibidos' => [
+        '93784'    => ['tipos' => ['2', '3'], 'nota' => 'tipo 2 y 3'],
+        '99246'    => ['tipos' => ['2', '3'], 'nota' => 'tipo 2 y 3'],
+        '99246.01' => ['tipos' => ['2', '3'], 'nota' => 'tipo 2 y 3'],
+        '99246.02' => ['tipos' => ['2', '3'], 'nota' => 'tipo 2 y 3'],
+        '15000'    => ['tipos' => [],         'nota' => 'trasplantes, Nivel II'],
+    ],
+
     // ── Colores de fila por tipo de regla (hex RGB sin #) ─────────────────
     // Precedencia (mayor = más prioritario):
     //   tipo(5) > dup(4) > hemo-elim(3) > uro/coag(2) > sug(1) > manual(0)
