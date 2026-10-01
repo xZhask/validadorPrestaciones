@@ -191,8 +191,17 @@ class ReglaHemograma implements ReglaInterface
         array  $faltantes,
     ): array {
         $presente = (string) $codigosValidos[0];
-        $f        = $presentes[$presente][0];
-        $cantidad = (int) ($f['cantidad'] ?? 0);
+        $filas    = $presentes[$presente];
+        $f        = $filas[0];
+
+        // Si el código viene repetido, la cantidad a igualar es la que quedará
+        // tras consolidar: la suma, contada igual que ReglaCodigosDuplicados
+        // (fila sin cantidad = 1).  Sin columna cantidad no hay número que dar.
+        $conCantidad = array_filter($filas, static fn(array $x): bool => ($x['cantidad'] ?? null) !== null);
+        $cantidad    = $conCantidad === [] ? 0 : array_sum(array_map(
+            static fn(array $x): int => ($x['cantidad'] ?? 0) > 0 ? (int) $x['cantidad'] : 1,
+            $filas
+        ));
 
         $mismaCantidad = $cantidad > 0
             ? "en la misma cantidad que {$presente} ({$cantidad})"
