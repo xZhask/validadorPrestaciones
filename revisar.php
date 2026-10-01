@@ -195,6 +195,35 @@ body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);font-size
 .cmot{padding:4px 10px 9px 78px;font-size:12px;color:var(--muted);background:var(--surface-2);border-bottom:1px solid var(--line);line-height:1.4}
 .manual-tag{display:inline-block;font-size:.61rem;padding:.01rem .26rem;border-radius:3px;background:var(--man-tag-bg);color:var(--man-tag-tx);border:1px solid var(--man-tag-br);margin-left:.22rem;vertical-align:middle}
 
+/* ── Duplicados agrupados por código ──────────────────────────────────── */
+.dgrp{border-bottom:1px solid var(--line)}
+.dgrp:last-child{border-bottom:none}
+.drow{display:flex;align-items:center;gap:9px;padding:7px 10px 2px;cursor:pointer}
+.drow:hover{background:var(--surface-2)}
+.dgrp.rev .drow,.dgrp.rev .dsub{opacity:.5}
+.dgrp.rev .chk{background:var(--accent);border-color:var(--accent)}
+.dgrp.rev .chk svg{opacity:1}
+.chk.part{background:var(--accent);border-color:var(--accent)}
+.chk.part::after{content:"";width:8px;height:2px;border-radius:1px;background:#fff}
+.chk.part svg{display:none}
+.dchev{color:var(--faint);display:inline-flex;flex-shrink:0;transform:rotate(-90deg);transition:transform .15s}
+.dchev.open{transform:none}
+.dsub{padding:0 10px 7px 35px;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.dsub b{font-weight:600;color:var(--ink)}
+.dpu{padding:0 3px;border-radius:3px;background:var(--hemo-bg);color:var(--hemo-tx)}
+.dprecio{flex-shrink:0;min-width:74px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap}
+.dprecio small{font-size:10px;font-weight:400;color:var(--faint)}
+.dprecio.varios{padding:1px 6px;border-radius:5px;background:var(--hemo-bg);color:var(--hemo-tx)}
+.dwarn{display:flex;gap:6px;align-items:flex-start;margin:0 10px 7px 35px;padding:4px 8px;border-radius:6px;font-size:12px;line-height:1.4;background:var(--hemo-bg);color:var(--hemo-tx)}
+.dwarn svg{width:13px;height:13px;flex-shrink:0;margin-top:2px;stroke:currentColor;stroke-width:2;fill:none}
+.dexp{border-top:1px solid var(--line);background:var(--surface-2);padding-left:24px}
+.grp-aviso{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--hemo-bg);color:var(--hemo-tx);margin-left:4px}
+
+/* ── Navegación por teclado ───────────────────────────────────────────── */
+.drow:focus,.crow:focus{outline:2px solid var(--accent);outline-offset:-2px}
+.kbd-hint{font-size:11px;color:var(--faint);padding:2px 4px 8px}
+.kbd-hint kbd{font-family:var(--mono);font-size:10.5px;padding:0 4px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;background:var(--surface);color:var(--muted)}
+
 /* ── Sin observación ──────────────────────────────────────────────────── */
 .sitem{display:flex;align-items:center;gap:9px;padding:7px 10px;border-bottom:1px solid var(--line)}
 .sitem:last-child{border-bottom:none}
@@ -367,7 +396,15 @@ const FAM_META = {
     manual: { nombre:'Manual',       st:'var(--man-st)',  bg:'var(--man-bg)',  tx:'var(--man-tx)'  },
 };
 const FAM_ORDER  = ['tipo', 'dup', 'hemo', 'uro', 'coag', 'sug', 'manual'];
-const colapsados = { dup: true };
+const colapsados = {};
+
+// Duplicados se revisan por código: cada código repetido es una sola decisión
+const _dupAbierto = {};   // codigo → true si se despliegan sus filas
+const _dupGrupos  = {};   // codigo → grupo calculado en el último render
+let   _itemsTodos = [];   // observaciones aplanadas del último render
+let   focoKey     = null; // data-key de la fila con foco, para recuperarlo tras re-renderizar
+
+const ICO_WARN = '<svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
 
 // ── API ────────────────────────────────────────────────────────────────────
 async function apiGet(ruta, params = {}) {
@@ -540,7 +577,9 @@ function renderSidebar() {
 // ── Selección ──────────────────────────────────────────────────────────────
 async function seleccionar(pk) {
     pkActual = pk;
+    focoKey  = null;
     Object.keys(_filaAbierta).forEach(k => delete _filaAbierta[k]);
+    Object.keys(_dupAbierto).forEach(k => delete _dupAbierto[k]);
     renderSidebar();
 
     const empty   = document.getElementById('detEmpty');
@@ -574,6 +613,7 @@ async function recargarDetalle() {
 // ── Render detalle ─────────────────────────────────────────────────────────
 function renderDetalle() {
     Object.keys(_obs).forEach(k => delete _obs[k]);
+    Object.keys(_dupGrupos).forEach(k => delete _dupGrupos[k]);
 
     const d   = detalleData;
     const con = d.con_observacion;
@@ -593,6 +633,8 @@ function renderDetalle() {
             });
         });
     });
+
+    _itemsTodos = items;
 
     // Agrupar por familia
     const grupos = {};
@@ -644,7 +686,9 @@ function renderDetalle() {
                     <span class="col-n">${revisadasN}/${totalObs} revisadas</span>
                 </div>
                 <div class="col-body">
-                    ${gruposHtml || '<div class="col-empty">Sin procedimientos con observaciones</div>'}
+                    ${gruposHtml
+                        ? `<div class="kbd-hint"><kbd>↑</kbd> <kbd>↓</kbd> moverse · <kbd>Espacio</kbd> aprobar y avanzar · <kbd>Enter</kbd> ver filas o motivo</div>${gruposHtml}`
+                        : '<div class="col-empty">Sin procedimientos con observaciones</div>'}
                 </div>
             </section>
             <section class="col">
@@ -661,32 +705,47 @@ function renderDetalle() {
             </section>
         </div>`;
 
+    // Re-renderizar reemplaza todo el panel: conservar scroll y foco para no
+    // perder el lugar en prestaciones con cientos de observaciones
+    const panel  = document.getElementById('detPanel');
+    const scroll = panel.scrollTop;
     document.getElementById('detContent').innerHTML = html;
+    panel.scrollTop = scroll;
+    restaurarFoco();
 }
 
-function sortDuplicados(items) {
-    const firstFila = {};
-    items.forEach(item => {
-        if (!(item.codigo in firstFila) || item.fila < firstFila[item.codigo])
-            firstFila[item.codigo] = item.fila;
-    });
-    return [...items].sort((a, b) => {
-        const df = firstFila[a.codigo] - firstFila[b.codigo];
-        if (df !== 0) return df;
-        const aElim = /^ELIMINAR/i.test(a.accion) ? 1 : 0;
-        const bElim = /^ELIMINAR/i.test(b.accion) ? 1 : 0;
-        if (aElim !== bElim) return aElim - bElim;
-        return a.fila - b.fila;
-    });
+function filaDeKey(key) {
+    return key ? document.querySelector(`#detContent [data-key="${CSS.escape(key)}"]`) : null;
+}
+
+// Sin scroll: si el render lo provocó el mouse en otra zona, no hay que saltar
+// a la última fila con foco.  El teclado hace su propio scroll.
+function restaurarFoco() {
+    filaDeKey(focoKey)?.focus({ preventScroll: true });
 }
 
 function renderGrupo(fam, items) {
-    const meta   = FAM_META[fam];
-    const col    = !!colapsados[fam];
-    const revisN = items.filter(i => i.revisada).length;
-    const cntTx  = revisN > 0 ? `(${items.length} · ${revisN} rev.)` : `(${items.length})`;
-    const ordered = fam === 'dup' ? sortDuplicados(items) : items;
-    const rows   = col ? '' : ordered.map(renderObsRow).join('');
+    const meta = FAM_META[fam];
+    const col  = !!colapsados[fam];
+    let cntTx, rows, bulk;
+
+    if (fam === 'dup') {
+        // Se calcula aunque el grupo esté plegado: "aprobar sin avisos" lo necesita
+        const grupos = construirGruposDup(items);
+        grupos.forEach(g => { _dupGrupos[g.codigo] = g; });
+        const aprob  = grupos.filter(g => g.items.every(i => i.revisada)).length;
+        const avisoN = grupos.filter(g => g.avisos.length).length;
+        cntTx = `(${grupos.length} código${grupos.length === 1 ? '' : 's'} · ${items.length} filas`
+              + (aprob ? ` · ${aprob} aprob.` : '') + ')'
+              + (avisoN ? `<span class="grp-aviso">${avisoN} con aviso${avisoN === 1 ? '' : 's'}</span>` : '');
+        rows = col ? '' : grupos.map(renderCodigoDup).join('');
+        bulk = `<button class="grp-bulk" title="Aprueba los códigos sin avisos; los que tienen avisos se aprueban uno por uno" onclick="event.stopPropagation();aprobarDupLimpios()">aprobar sin avisos</button>`;
+    } else {
+        const revisN = items.filter(i => i.revisada).length;
+        cntTx = revisN > 0 ? `(${items.length} · ${revisN} rev.)` : `(${items.length})`;
+        rows  = col ? '' : items.map(renderObsRow).join('');
+        bulk  = `<button class="grp-bulk" onclick="event.stopPropagation();marcarGrupo('${fam}')">marcar revisado</button>`;
+    }
 
     return `<div class="grp">
         <div class="grp-head ${col ? 'collapsed' : ''}" onclick="toggleGrupo('${fam}')">
@@ -694,10 +753,151 @@ function renderGrupo(fam, items) {
             <span class="grp-dot" style="background:${meta.st}"></span>
             <span class="grp-name">${meta.nombre}</span>
             <span class="grp-count">${cntTx}</span>
-            <button class="grp-bulk" onclick="event.stopPropagation();marcarGrupo('${fam}')">marcar revisado</button>
+            ${bulk}
         </div>
         ${col ? '' : `<div class="grp-body">${rows}</div>`}
     </div>`;
+}
+
+// ── Duplicados por código ──────────────────────────────────────────────────
+const esAgregar  = i => /^AGREGAR/i.test(i.accion || '');
+const esEliminar = i => /^ELIMINAR/i.test(i.accion || '');
+const cantDe     = i => Number(i.cantidad) > 0 ? Number(i.cantidad) : 1;
+
+/**
+ * Reúne las observaciones de duplicados por código y detecta lo que no debe
+ * pasar desapercibido al aprobar el código de un clic.  Los códigos con
+ * avisos van primero.
+ */
+function construirGruposDup(items) {
+    // Filas que además tienen observaciones de otra familia
+    const otrasFams = {};
+    _itemsTodos.forEach(it => {
+        const f = familiaDeRegla(it.regla);
+        if (f !== 'dup') (otrasFams[it.fila] ??= new Set()).add(FAM_META[f].nombre);
+    });
+
+    const porCodigo = new Map();
+    items.forEach(it => {
+        if (!porCodigo.has(it.codigo)) porCodigo.set(it.codigo, []);
+        porCodigo.get(it.codigo).push(it);
+    });
+
+    const grupos = [];
+    porCodigo.forEach((lista, codigo) => {
+        lista.sort((a, b) => (esAgregar(b) - esAgregar(a)) || a.fila - b.fila);
+        const keep   = lista.find(esAgregar) || null;
+        const elims  = lista.filter(esEliminar);
+        const filas  = [...new Set(lista.map(i => i.fila))];
+        const avisos = [];
+
+        if (!keep) {
+            avisos.push('Ninguna fila conserva el código: todas sus filas quedan para eliminar');
+        }
+
+        lista.filter(i => !esAgregar(i) && !esEliminar(i))
+             .forEach(i => avisos.push(`F.${i.fila} tiene otra acción: ${i.accion}`));
+
+        const manuales = lista.filter(i => i.origen === 'manual').map(i => `F.${i.fila}`);
+        if (manuales.length) avisos.push(`Editada a mano: ${manuales.join(', ')}`);
+
+        const porValor = new Map();
+        lista.forEach(i => {
+            const v = parseFloat(i.valor || 0).toFixed(2);
+            if (!porValor.has(v)) porValor.set(v, i.fila);
+        });
+        if (porValor.size > 1) {
+            avisos.push('Valores distintos entre filas: '
+                + [...porValor].map(([v, f]) => `S/.${v} (F.${f})`).join(', '));
+        }
+
+        // La regla cuenta filas; si alguna ya trae cantidad > 1, la suma real es otra
+        const mQty = keep && keep.accion.match(/cantidad\s*=\s*(\d+)/);
+        if (mQty) {
+            const cantPorFila = new Map(lista.map(i => [i.fila, cantDe(i)]));
+            const conCant = [...cantPorFila].filter(([, c]) => c > 1);
+            const suma    = [...cantPorFila.values()].reduce((s, c) => s + c, 0);
+            if (conCant.length && suma !== Number(mQty[1])) {
+                avisos.push(conCant.map(([f, c]) => `F.${f} ya trae cantidad ${c}`).join(', ')
+                    + `; sumando cantidades el total sería ${suma}, la sugerencia dice ${mQty[1]}`);
+            }
+        }
+
+        const cruces = filas.filter(f => otrasFams[f])
+                            .map(f => `F.${f} (${[...otrasFams[f]].join(', ')})`);
+        if (cruces.length) avisos.push('También tiene otra observación: ' + cruces.join(', '));
+
+        grupos.push({
+            codigo, desc: lista[0].desc, items: lista, keep, elims, avisos,
+            precios:     [...porValor.keys()].sort((a, b) => a - b),
+            montoElim:   elims.reduce((s, i) => s + parseFloat(i.valor || 0) * cantDe(i), 0),
+            primeraFila: Math.min(...filas),
+        });
+    });
+
+    return grupos.sort((a, b) =>
+        ((b.avisos.length > 0) - (a.avisos.length > 0)) || a.primeraFila - b.primeraFila);
+}
+
+function renderCodigoDup(g) {
+    const meta    = FAM_META.dup;
+    const revN    = g.items.filter(i => i.revisada).length;
+    const todas   = revN === g.items.length;
+    const abierto = !!_dupAbierto[g.codigo];
+    const codJs   = h(JSON.stringify(g.codigo));
+
+    const chip = g.keep
+        ? formatAccion(g.keep.accion, 'dup')
+        : `ELIMINAR <span class="qty">×${g.elims.length}</span>`;
+
+    // El precio decide a veces qué fila conservar.  Si difieren, la conservada
+    // muestra el suyo y de las demás solo las que se apartan de él, que van
+    // primero para que el recorte "+N" nunca las esconda.
+    const variosPrecios = g.precios.length > 1;
+    const pu     = i => parseFloat(i.valor || 0).toFixed(2);
+    const ref    = g.keep ? pu(g.keep) : null;
+    const difiere = i => variosPrecios && pu(i) !== ref;
+    const etiqueta = (i, siempre = false) => `F.${i.fila}`
+        + ((siempre && variosPrecios) || difiere(i) ? ` <span class="dpu">S/.${pu(i)}</span>` : '');
+    const precioTx = variosPrecios
+        ? `S/.${g.precios[0]}–${g.precios[g.precios.length - 1]}`
+        : `S/.${g.precios[0]} <small>c/u</small>`;
+
+    const LIM   = 8;
+    const elimF = [...g.elims]
+        .sort((a, b) => (difiere(b) - difiere(a)) || a.fila - b.fila)
+        .map(i => etiqueta(i));
+    const elimTx = elimF.length > LIM
+        ? `${elimF.slice(0, LIM).join(', ')} … +${elimF.length - LIM}`
+        : elimF.join(', ');
+    const partes = [];
+    if (g.keep)          partes.push(`conserva <b>${etiqueta(g.keep, true)}</b>`);
+    if (elimF.length)    partes.push(`elimina ${elimTx}`);
+    if (g.montoElim > 0) partes.push(`descuenta S/.${g.montoElim.toFixed(2)}`);
+
+    const avisos  = g.avisos.map(a => `<div class="dwarn">${ICO_WARN}<span>${h(a)}</span></div>`).join('');
+    const detalle = abierto ? `<div class="dexp">${g.items.map(renderObsRow).join('')}</div>` : '';
+
+    return `<div class="dgrp ${todas ? 'rev' : ''}">
+        <div class="drow" tabindex="0" data-key="${h('dup:' + g.codigo)}" onclick="toggleDup(${codJs})">
+            <button class="chk ${revN && !todas ? 'part' : ''}" title="Aprobar el código completo" onclick="event.stopPropagation();aprobarCodigo(${codJs})">
+                <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+            </button>
+            <span class="ccod">${h(g.codigo)}</span>
+            <span class="cdesc" title="${h(g.desc)}">${h(g.desc)}</span>
+            <span class="chip" style="background:${meta.bg};color:${meta.tx}">${chip}</span>
+            <span class="dprecio ${variosPrecios ? 'varios' : ''}" title="${variosPrecios ? 'Precios unitarios distintos entre filas' : 'Precio unitario'}">${precioTx}</span>
+            <span class="dchev ${abierto ? 'open' : ''}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+        <div class="dsub">${partes.join(' · ')}</div>
+        ${avisos}
+        ${detalle}
+    </div>`;
+}
+
+function toggleDup(codigo) {
+    _dupAbierto[codigo] = !_dupAbierto[codigo];
+    renderDetalle();
 }
 
 function renderObsRow(item) {
@@ -710,7 +910,7 @@ function renderObsRow(item) {
     const motHtml  = abierta ? `<div class="cmot">${h(item.motivo)}${manTag}</div>` : '';
     const val      = `${item.cantidad} × S/.${parseFloat(item.valor || 0).toFixed(2)}`;
 
-    return `<div class="crow ${item.revisada ? 'rev' : ''}" onclick="toggleFilaMotivo('${key}')">
+    return `<div class="crow ${item.revisada ? 'rev' : ''}" tabindex="0" data-key="obs:${key}" onclick="toggleFilaMotivo('${key}')">
         <button class="chk" title="Marcar revisada" onclick="event.stopPropagation();marcarObs(${item.fila},${item.idx})">
             <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
         </button>
@@ -923,6 +1123,117 @@ async function marcarGrupo(fam) {
         toast('Error: ' + e.message, 'err');
     }
 }
+
+// ── Aprobar varias a la vez ────────────────────────────────────────────────
+function obsDe(fila, idx) {
+    const proc = detalleData.con_observacion.find(p => p.fila === fila);
+    return proc?.observaciones.find(o => o.idx === idx) ?? null;
+}
+
+/** Fija `revisada` en un conjunto de observaciones; revierte la pantalla si falla. */
+async function fijarRevision(items, revisada) {
+    const objs  = items.map(i => obsDe(i.fila, i.idx)).filter(Boolean);
+    const antes = objs.map(o => o.revisada ?? false);
+    objs.forEach(o => { o.revisada = revisada; });
+    renderDetalle();
+    try {
+        await apiPost('revisar-varias', {
+            id: SESION_ID, pk: pkActual, revisada,
+            items: items.map(i => ({ fila: i.fila, idx: i.idx })),
+        });
+        return true;
+    } catch (e) {
+        objs.forEach((o, k) => { o.revisada = antes[k]; });
+        renderDetalle();
+        toast('Error al marcar: ' + e.message, 'err');
+        return false;
+    }
+}
+
+function aprobarCodigo(codigo) {
+    const g = _dupGrupos[codigo];
+    if (!g) return;
+    return fijarRevision(g.items, !g.items.every(i => i.revisada));
+}
+
+async function aprobarDupLimpios() {
+    const grupos    = Object.values(_dupGrupos);
+    const pendiente = g => !g.items.every(i => i.revisada);
+    const limpios   = grupos.filter(g => !g.avisos.length && pendiente(g));
+    const conAviso  = grupos.filter(g =>  g.avisos.length && pendiente(g)).length;
+
+    if (!limpios.length) {
+        toast(conAviso
+            ? `Quedan ${conAviso} código${conAviso === 1 ? '' : 's'} con avisos: apruébalos uno por uno`
+            : 'Todos los códigos ya están aprobados');
+        return;
+    }
+    if (await fijarRevision(limpios.flatMap(g => g.items), true)) {
+        toast(`${limpios.length} código${limpios.length === 1 ? '' : 's'} aprobado${limpios.length === 1 ? '' : 's'}`
+            + (conAviso ? ` · ${conAviso} con avisos siguen pendientes` : ''), 'ok');
+    }
+}
+
+// ── Teclado ────────────────────────────────────────────────────────────────
+document.getElementById('detContent').addEventListener('focusin', e => {
+    // Un botón fuera de las filas navegables (p.ej. "+ Obs") suelta el foco guardado
+    focoKey = e.target.closest('[data-key]')?.dataset.key ?? null;
+});
+
+function enfocar(el) {
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'nearest' });
+}
+
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.getElementById('dlgObs').open) return;
+    const t = e.target;
+    if (t.matches?.('input, textarea, select')) return;
+    if (!detalleData || document.getElementById('detContent').hidden) return;
+
+    const navs   = [...document.querySelectorAll('#detContent [data-key]')];
+    const actual = t.closest?.('#detContent [data-key]') ?? null;
+    const i      = actual ? navs.indexOf(actual) : -1;
+    if (!navs.length) return;
+
+    // Espacio/Enter sobre un botón dentro de la fila: que actúe el botón
+    if ((e.key === ' ' || e.key === 'Enter') && t !== actual) return;
+
+    switch (e.key) {
+        case 'ArrowDown': case 'j':
+            e.preventDefault();
+            enfocar(navs[Math.min(i + 1, navs.length - 1)]);
+            break;
+        case 'ArrowUp': case 'k':
+            e.preventDefault();
+            enfocar(navs[Math.max(i - 1, 0)]);
+            break;
+        case ' ': {
+            if (!actual) return;
+            e.preventDefault();
+            const key = actual.dataset.key;
+            // El foco pasa a la siguiente antes de re-renderizar, para que lo recupere ahí
+            focoKey = navs[i + 1]?.dataset.key ?? key;
+            if (key.startsWith('dup:')) {
+                aprobarCodigo(key.slice(4));
+            } else {
+                const [fila, idx] = key.slice(4).split('_').map(Number);
+                marcarObs(fila, idx);
+            }
+            // Ambas re-renderizan antes de esperar al servidor: la siguiente ya existe
+            filaDeKey(focoKey)?.scrollIntoView({ block: 'nearest' });
+            break;
+        }
+        case 'Enter':
+            if (!actual) return;
+            e.preventDefault();
+            if (actual.dataset.key.startsWith('dup:')) toggleDup(actual.dataset.key.slice(4));
+            else toggleFilaMotivo(actual.dataset.key.slice(4));
+            break;
+    }
+});
 
 // ── Borrar obs ─────────────────────────────────────────────────────────────
 async function borrarObs(fila, idx) {

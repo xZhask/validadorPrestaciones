@@ -73,6 +73,7 @@ try {
         'POST:validar'        => rutaPostValidar($gestor),
         'POST:revisar-obs'    => rutaPostRevisarObs($gestor),
         'POST:revisar-grupo'  => rutaPostRevisarGrupo($gestor),
+        'POST:revisar-varias' => rutaPostRevisarVarias($gestor),
         'POST:revalidar'      => rutaPostRevalidar($gestor, $cfg),
         default               => jsonError("Ruta no encontrada: {$method} {$ruta}", 404),
     };
@@ -486,6 +487,49 @@ function rutaPostRevisarGrupo(GestorSesiones $gestor): never
     $gestor->guardar($id, $estado);
 
     jsonOk(['revisada' => $target, 'n' => count($targets)]);
+}
+
+// ── POST revisar-varias ───────────────────────────────────────────────────────
+
+/**
+ * Fija el estado de revisión de un conjunto explícito de observaciones.
+ * Recibe el estado final en vez de alternarlo: si la pantalla y el archivo
+ * difieren en alguna, un toggle las dejaría a medias.
+ */
+function rutaPostRevisarVarias(GestorSesiones $gestor): never
+{
+    $body  = bodyJson();
+    $id    = req($body, 'id');
+    $pk    = req($body, 'pk');
+    $items = $body['items'] ?? null;
+
+    if (!is_array($items) || $items === []) {
+        jsonError('Campo requerido: items (lista de {fila, idx})');
+    }
+    if (!isset($body['revisada']) || !is_bool($body['revisada'])) {
+        jsonError('Campo requerido: revisada (booleano)');
+    }
+
+    $estado = $gestor->cargar($id);
+    $pkStr  = (string) $pk;
+
+    // Validar todas antes de escribir ninguna, para no dejar el grupo a medias
+    $posiciones = [];
+    foreach ($items as $it) {
+        $filaStr = (string) (int) ($it['fila'] ?? 0);
+        $idx     = (int) ($it['idx'] ?? -1);
+        if (!isset($estado['prestaciones'][$pkStr]['observaciones'][$filaStr][$idx])) {
+            jsonError("Observación no encontrada (fila={$filaStr}, idx={$idx})", 404);
+        }
+        $posiciones[] = [$filaStr, $idx];
+    }
+
+    foreach ($posiciones as [$filaStr, $idx]) {
+        $estado['prestaciones'][$pkStr]['observaciones'][$filaStr][$idx]['revisada'] = $body['revisada'];
+    }
+    $gestor->guardar($id, $estado);
+
+    jsonOk(['revisada' => $body['revisada'], 'n' => count($posiciones)]);
 }
 
 // ── POST validar ──────────────────────────────────────────────────────────────
