@@ -237,12 +237,14 @@ class GestorSesiones
 
         // Capturar qué observaciones de sistema estaban marcadas como revisadas
         // antes de limpiarlas, para restaurar ese estado al reinsertarlas.
+        // Se guarda también la acción aprobada: si el motor ahora pide otra
+        // cosa (p.ej. otra cantidad), la aprobación vieja no debe heredarse.
         $revisadasPrevias = [];
         foreach ($estado['prestaciones'] as $pk => $prestacion) {
             foreach ($prestacion['observaciones'] ?? [] as $fila => $lista) {
                 foreach ($lista as $obs) {
                     if (($obs['origen'] ?? '') === 'sistema' && !empty($obs['revisada'])) {
-                        $revisadasPrevias[$pk][(string) $fila][$obs['regla']] = true;
+                        $revisadasPrevias[$pk][(string) $fila][$obs['regla']][$obs['accion']] = true;
                     }
                 }
             }
@@ -285,7 +287,7 @@ class GestorSesiones
                     'color'     => $obs->color,
                     'prioridad' => $obs->prioridad,
                     'origen'    => 'sistema',
-                    'revisada'  => $revisadasPrevias[$pkStr][$filaStr][$obs->reglaCodigo] ?? false,
+                    'revisada'  => $revisadasPrevias[$pkStr][$filaStr][$obs->reglaCodigo][$obs->accion] ?? false,
                 ];
                 $total++;
             }

@@ -9,9 +9,14 @@ use Validador\Observacion;
 /**
  * Dentro de una atención (mismo PK) detecta códigos CPMS repetidos.
  *
- * Para cada código que aparece N ≥ 2 veces:
- *   - Primera ocurrencia → AGREGAR — cantidad = N  (consolidar en esta fila)
+ * Para cada código que aparece en N ≥ 2 filas:
+ *   - Primera ocurrencia → AGREGAR — cantidad = T  (consolidar en esta fila)
  *   - Ocurrencias siguientes → ELIMINAR (redundancia consolidada en la primera)
+ *
+ * T es la suma de la columna cantidad de esas filas, no el número de filas:
+ * una fila que ya trae cantidad 3 aporta 3.  Así coincide con ReglaHemograma,
+ * que también suma cantidades al comparar los códigos del par.  Una fila sin
+ * cantidad cuenta como 1, porque estar facturada ya es al menos una unidad.
  *
  * Cubre automáticamente HbA1c (83036) y consejerías (1 por CPMS por prestación).
  *
@@ -46,6 +51,13 @@ class ReglaCodigosDuplicados implements ReglaInterface
             }
 
             $primeraFila = $filas[0]['fila'];
+            $total       = array_sum(array_map(
+                static fn(array $f): int => ($f['cantidad'] ?? 0) > 0 ? (int) $f['cantidad'] : 1,
+                $filas
+            ));
+            $motivo = $total === $n
+                ? "Código {$cod} repetido {$n} veces; consolidar cantidad en esta fila"
+                : "Código {$cod} repetido en {$n} filas que suman cantidad {$total}; consolidar cantidad en esta fila";
 
             // Primera ocurrencia: acción de consolidación
             $obs[] = new Observacion(
@@ -57,8 +69,8 @@ class ReglaCodigosDuplicados implements ReglaInterface
                 reglaNombre: $this->nombre(),
                 prioridad:   $this->prioridad(),
                 color:       $this->color(),
-                motivo:      "Código {$cod} repetido {$n} veces; consolidar cantidad en esta fila",
-                accion:      "AGREGAR — cantidad = {$n}",
+                motivo:      $motivo,
+                accion:      "AGREGAR — cantidad = {$total}",
             );
 
             // Ocurrencias siguientes: eliminar
